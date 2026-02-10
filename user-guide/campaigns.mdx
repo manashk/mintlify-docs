@@ -1,0 +1,84 @@
+---
+title: "Campaigns"
+sidebarTitle: "Campaigns"
+description: "Create and manage calling campaigns to reach groups of phone numbers systematically."
+icon: "bullhorn"
+---
+
+import { Steps, Step, Info, CodeGroup } from "mintlify/components";
+
+## Overview
+
+Campaigns provide a simplified way to manage outbound calling lists. Unlike batch jobs (which use Celery for distributed processing), campaigns execute via background tasks for simpler use cases.
+
+```mermaid
+flowchart LR
+    A["📋 Create Campaign"] --> B["📞 Add Numbers\n(CSV or manual)"]
+    B --> C["🚀 Start Campaign"]
+    C --> D["📊 Track Progress"]
+    
+    style A fill:#6366F1,color:#fff
+    style D fill:#10B981,color:#fff
+```
+
+---
+
+## Creating a Campaign
+
+<Steps>
+  <Step title="Create Campaign">
+    Go to **Campaigns** → **Create New**. Provide:
+    - Campaign name
+    - Description
+    - Agent phone number (determines which agent handles calls)
+  </Step>
+
+  <Step title="Add Phone Numbers">
+    Two options:
+
+    **Option A: CSV Import**
+    - Upload a CSV with phone numbers
+    - Duplicate numbers are automatically removed
+
+    **Option B: Manual Entry**
+    - Add numbers one at a time
+    - Edit or remove individual numbers
+  </Step>
+
+  <Step title="Start the Campaign">
+    Click **Start Campaign**. The system begins calling each number sequentially using the configured agent.
+  </Step>
+
+  <Step title="Monitor Progress">
+    View the campaign status page to see:
+    - Overall progress (total, called, remaining)
+    - Per-number call status
+    - Link to individual call logs
+  </Step>
+</Steps>
+
+---
+
+## Campaigns vs. Batch Jobs
+
+| Feature | Campaigns | Batch Jobs |
+|---------|-----------|-----------|
+| **Execution Engine** | FastAPI BackgroundTasks | Celery (distributed) |
+| **Scheduling** | No | Yes (Celery Beat) |
+| **Concurrency Control** | No | Yes (Redis semaphore) |
+| **Per-Item Tracking** | Basic (called/not called) | Detailed (pending/calling/completed/failed) |
+| **Retry on Failure** | No | Yes (auto-retry ×3) |
+| **Persistence** | Lost if process restarts | Survives restarts |
+| **Best For** | Small lists (< 50 numbers) | Large-scale calling (100+ numbers) |
+
+<Info>For production outbound calling at scale, use **Batch Jobs** instead of Campaigns. Campaigns are better suited for small, ad-hoc calling lists.</Info>
+
+---
+
+## Campaign Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `created` | Campaign exists but hasn't started |
+| `running` | Currently executing calls |
+| `completed` | All numbers have been called |

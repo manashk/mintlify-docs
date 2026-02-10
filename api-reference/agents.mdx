@@ -1,0 +1,259 @@
+---
+title: "Agents API"
+sidebarTitle: "Agents"
+description: "Create, read, update, and delete AI agents. Manage agent knowledge base and configuration."
+icon: "robot"
+---
+
+import { CodeGroup, Info, Warning, Tabs, Tab, ParamField, Expandable } from "mintlify/components";
+
+## List All Agents
+
+Retrieve all agents in the current workspace.
+
+**`GET /agents`**
+
+**Authentication:** JWT cookie or API key
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/agents" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -H "X-Workspace-Id: YOUR_WORKSPACE_ID"
+```
+
+```json Response
+[
+  {
+    "id": "ag_550e8400",
+    "agent_name": "Sales Bot",
+    "phone_number": "+16505551234",
+    "agent_type": "sales",
+    "LLM_provider": "open ai",
+    "LLM_model": "gpt-4o",
+    "STT_provider": "deepgram",
+    "TTS_provider": "elevenlabs",
+    "created_at": "2026-01-15T10:30:00Z"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get Agent by ID
+
+**`GET /agents/{agent_id}`**
+
+**Authentication:** JWT cookie or API key
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/agents/ag_550e8400" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "id": "ag_550e8400",
+  "agent_name": "Sales Bot",
+  "phone_number": "+16505551234",
+  "agent_type": "sales",
+  "LLM_provider": "open ai",
+  "LLM_model": "gpt-4o",
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "system_prompt": "You are a helpful sales assistant...",
+  "first_message": "Hello! How can I help you today?",
+  "STT_provider": "deepgram",
+  "STT_model": "nova-3",
+  "STT_language": "en",
+  "TTS_provider": "elevenlabs",
+  "TTS_model": "eleven_turbo_v2",
+  "TTS_voice": "Rachel",
+  "TTS_speed": 1.0,
+  "transfer_phone_number": "+14155559876",
+  "warm_transfer_text": "I'm transferring a customer who needs help with...",
+  "max_call_duration": 300,
+  "silence_timeout": 30,
+  "ring_timeout": 30,
+  "noise_cancellation_model": "BVE",
+  "custom_functions": [],
+  "knowledge_base_enabled": true,
+  "workspace_id": "ws_123",
+  "created_at": "2026-01-15T10:30:00Z",
+  "updated_at": "2026-02-10T14:22:00Z"
+}
+```
+</CodeGroup>
+
+---
+
+## Create Agent
+
+**`POST /agents`**
+
+**Authentication:** JWT cookie (Developer or Admin role)
+
+**Request Body:**
+
+<Expandable title="All Parameters">
+  <ParamField body="agent_name" type="string" required>Agent display name</ParamField>
+  <ParamField body="phone_number" type="string">Phone number to assign</ParamField>
+  <ParamField body="agent_type" type="string">Category label</ParamField>
+  <ParamField body="LLM_provider" type="string" required>LLM provider: "open ai" or "groq"</ParamField>
+  <ParamField body="LLM_model" type="string" required>Model identifier (e.g., "gpt-4o")</ParamField>
+  <ParamField body="temperature" type="number">0.0 – 2.0, default 0.7</ParamField>
+  <ParamField body="max_tokens" type="integer">Max response tokens</ParamField>
+  <ParamField body="system_prompt" type="string" required>Agent instructions</ParamField>
+  <ParamField body="first_message" type="string">Greeting when call connects</ParamField>
+  <ParamField body="STT_provider" type="string" required>STT provider name</ParamField>
+  <ParamField body="STT_model" type="string">STT model name</ParamField>
+  <ParamField body="STT_language" type="string">Language code (e.g., "en")</ParamField>
+  <ParamField body="TTS_provider" type="string" required>TTS provider name</ParamField>
+  <ParamField body="TTS_model" type="string">TTS model name</ParamField>
+  <ParamField body="TTS_voice" type="string">Voice ID</ParamField>
+  <ParamField body="TTS_speed" type="number">Speech rate (default 1.0)</ParamField>
+  <ParamField body="transfer_phone_number" type="string">Transfer target number</ParamField>
+  <ParamField body="warm_transfer_text" type="string">Handoff briefing text</ParamField>
+  <ParamField body="max_call_duration" type="integer">Max call seconds (default 300)</ParamField>
+  <ParamField body="silence_timeout" type="integer">Silence auto-disconnect (default 30)</ParamField>
+  <ParamField body="custom_functions" type="array">Array of custom function configs</ParamField>
+</Expandable>
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/agents" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "agent_name": "Sales Bot",
+    "LLM_provider": "open ai",
+    "LLM_model": "gpt-4o",
+    "temperature": 0.7,
+    "system_prompt": "You are a helpful sales assistant for Acme Corp.",
+    "first_message": "Hello! Thanks for calling Acme Corp.",
+    "STT_provider": "deepgram",
+    "STT_model": "nova-3",
+    "TTS_provider": "elevenlabs",
+    "TTS_voice": "Rachel"
+  }'
+```
+
+```json Response (201)
+{
+  "id": "ag_new123",
+  "agent_name": "Sales Bot",
+  "LLM_provider": "open ai",
+  "LLM_model": "gpt-4o",
+  "created_at": "2026-02-11T00:30:00Z"
+}
+```
+</CodeGroup>
+
+---
+
+## Update Agent
+
+**`PUT /agents/{agent_id}`**
+
+**Authentication:** JWT cookie (Developer or Admin role)
+
+Accepts the same body as Create. Fields not provided retain their current values.
+
+<CodeGroup>
+```bash Request
+curl -X PUT "https://api.vaani.ai/agents/ag_550e8400" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "system_prompt": "Updated system prompt...",
+    "temperature": 0.5
+  }'
+```
+
+```json Response
+{
+  "id": "ag_550e8400",
+  "agent_name": "Sales Bot",
+  "temperature": 0.5,
+  "system_prompt": "Updated system prompt...",
+  "updated_at": "2026-02-11T01:00:00Z"
+}
+```
+</CodeGroup>
+
+---
+
+## Delete Agent
+
+**`DELETE /agents/{agent_id}`**
+
+**Authentication:** JWT cookie (Admin role)
+
+<CodeGroup>
+```bash Request
+curl -X DELETE "https://api.vaani.ai/agents/ag_550e8400" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "message": "Agent ag_550e8400 deleted"
+}
+```
+</CodeGroup>
+
+---
+
+## Upload Knowledge Base Files
+
+**`POST /agents/{agent_id}/upload`**
+
+**Authentication:** JWT cookie (Developer or Admin role)
+
+Upload documents to an agent's knowledge base for RAG.
+
+```bash
+curl -X POST "https://api.vaani.ai/agents/ag_550e8400/upload" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -F "files=@product_catalog.pdf" \
+  -F "files=@faq.txt"
+```
+
+---
+
+## Query Knowledge Base
+
+**`POST /agents/{agent_id}/query`**
+
+Test RAG retrieval against an agent's knowledge base.
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/agents/ag_550e8400/query" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "query": "What are your business hours?"
+  }'
+```
+
+```json Response
+{
+  "response": "Our business hours are Monday through Friday, 9 AM to 5 PM EST.",
+  "sources": ["faq.txt"]
+}
+```
+</CodeGroup>
+
+---
+
+## Error Responses
+
+| Status | Detail | Cause |
+|--------|--------|-------|
+| `401` | `"Invalid or missing token"` | Authentication failed |
+| `403` | `"Insufficient permissions"` | Role too low (need Developer+) |
+| `404` | `"Agent not found"` | Agent doesn't exist or not in workspace |
+| `422` | Validation errors | Missing required fields or invalid types |

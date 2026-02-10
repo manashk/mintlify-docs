@@ -1,0 +1,202 @@
+---
+title: "Agent Configuration"
+sidebarTitle: "Agents"
+description: "Create and configure AI voice agents with custom prompts, provider selections, and behavioral settings."
+icon: "robot"
+---
+
+import { Steps, Step, Info, Tip, Warning, Tabs, Tab } from "mintlify/components";
+
+## Overview
+
+An **Agent** is the core entity in Vaani — it's your AI-powered virtual phone assistant. Each agent is configured with:
+- A **system prompt** that defines personality and behavior
+- **LLM, STT, and TTS providers** for language processing and voice
+- **Custom functions** (webhook-based tools the agent can invoke)
+- **Call behavior** settings (max duration, silence handling, transfer config)
+
+---
+
+## Creating an Agent
+
+<Steps>
+  <Step title="Navigate to Agents">
+    In the dashboard sidebar, click **Agents** → **Create Agent**.
+  </Step>
+
+  <Step title="Configure Identity">
+    | Setting | Description |
+    |---------|-------------|
+    | **Agent Name** | Display name shown in dashboard and logs |
+    | **Phone Number** | Unique number assigned to this agent (auto-assigned or selected from provisioned numbers) |
+    | **Agent Type** | Category label for organizational purposes |
+  </Step>
+
+  <Step title="Choose AI Providers">
+    Select from the available provider combinations:
+
+    **Language Model (LLM):**
+    | Provider | Models | Best For |
+    |----------|--------|----------|
+    | OpenAI | `gpt-4o`, `gpt-4o-mini`, `gpt-4o-realtime` | Accuracy, tool calling, realtime voice |
+    | Groq | `llama-3`, `mixtral` | Speed and low latency |
+
+    **Speech-to-Text (STT):**
+    | Provider | Models | Best For |
+    |----------|--------|----------|
+    | Deepgram | `nova-3` | English, multilingual, keyword boosting |
+    | Sarvam | Various | Indian languages (Hindi, Tamil, etc.) |
+    | Cartesia | Various | General purpose |
+
+    **Text-to-Speech (TTS):**
+    | Provider | Best For |
+    |----------|----------|
+    | OpenAI | Cost-effective, good quality |
+    | ElevenLabs | Most natural, premium voices |
+    | Deepgram | Lowest latency |
+    | Rime | Customizable voices |
+    | Cartesia | General purpose |
+    | Sarvam | Indian languages |
+    | Murf | Studio-quality |
+    | Inworld | Gaming/virtual character voices |
+  </Step>
+
+  <Step title="Write Your System Prompt">
+    The system prompt defines your agent's personality, knowledge, and rules:
+
+    ```text
+    You are Sarah, a friendly appointments coordinator for Sunrise Dental Clinic.
+
+    Your responsibilities:
+    - Answer questions about our services (cleanings, fillings, root canals)
+    - Schedule, reschedule, and cancel appointments
+    - Collect patient information (name, phone, insurance)
+
+    Rules:
+    - Always be warm and professional
+    - If you can't answer a question, offer to transfer to a human agent
+    - Never provide medical advice
+    - Always confirm the appointment details before ending the call
+
+    Available appointment slots: Monday-Friday, 9 AM - 5 PM
+    ```
+
+    <Tip>Use double curly braces for **dynamic variables** that change per call: `{{customer_name}}`, `{{appointment_date}}`</Tip>
+  </Step>
+
+  <Step title="Set the First Message">
+    The **first message** is what the agent says when a call connects:
+
+    ```text
+    Hello! Thank you for calling Sunrise Dental. My name is Sarah. 
+    How can I help you today?
+    ```
+
+    This is automatically delivered via TTS when the caller connects.
+  </Step>
+
+  <Step title="Configure Call Behavior">
+    | Setting | Default | Description |
+    |---------|---------|-------------|
+    | Max Call Duration | 300s (5 min) | Hard time limit before auto-disconnect |
+    | Silence Timeout | 30s | Disconnect after this much silence |
+    | Ring Timeout | 30s | How long to ring on outbound calls |
+    | Agent Inactive Reminder | — | Prompt if agent is idle too long |
+    | Noise Cancellation | BVE | Background noise filtering model |
+  </Step>
+
+  <Step title="Add Custom Functions (Optional)">
+    Custom functions let your agent take actions during calls by calling external webhooks:
+
+    ```json
+    {
+      "name": "check_availability",
+      "description": "Check appointment availability for a given date",
+      "url": "https://api.your-clinic.com/availability",
+      "method": "POST",
+      "parameters": {
+        "date": {
+          "type": "string",
+          "description": "The date to check (YYYY-MM-DD format)"
+        }
+      },
+      "speak_during": "Let me check our availability for that date...",
+      "speak_after": "I've found the available slots."
+    }
+    ```
+
+    The agent will invoke this function when the conversation naturally requires it (determined by the LLM).
+  </Step>
+</Steps>
+
+---
+
+## Agent Settings Reference
+
+<Tabs>
+  <Tab title="LLM Settings">
+    | Setting | Type | Description |
+    |---------|------|-------------|
+    | `LLM_provider` | string | "open ai" or "groq" |
+    | `LLM_model` | string | Model identifier (e.g., "gpt-4o") |
+    | `temperature` | float | Response creativity (0.0 = deterministic, 2.0 = creative) |
+    | `max_tokens` | integer | Maximum response length in tokens |
+    | `system_prompt` | text | Agent instructions and personality |
+    | `first_message` | text | Greeting when call connects |
+  </Tab>
+
+  <Tab title="Voice Settings">
+    | Setting | Type | Description |
+    |---------|------|-------------|
+    | `STT_provider` | string | Speech recognition provider |
+    | `STT_model` | string | STT model identifier |
+    | `STT_language` | string | Language code (e.g., "en") |
+    | `stt_keywords` | JSON | Words to boost recognition accuracy |
+    | `TTS_provider` | string | Voice synthesis provider |
+    | `TTS_model` | string | TTS model identifier |
+    | `TTS_voice` | string | Voice ID or name |
+    | `TTS_speed` | float | Speech rate multiplier |
+  </Tab>
+
+  <Tab title="Transfer Settings">
+    | Setting | Type | Description |
+    |---------|------|-------------|
+    | `transfer_phone_number` | string | Target number for transfers |
+    | `warm_transfer_text` | text | Briefing for the receiving party |
+    | `warm_transfer_retries` | integer | Retry attempts for warm transfer |
+  </Tab>
+
+  <Tab title="Session Settings">
+    | Setting | Type | Description |
+    |---------|------|-------------|
+    | `max_call_duration` | integer | Maximum call length (seconds) |
+    | `ring_timeout` | integer | Outbound ring timeout (seconds) |
+    | `silence_timeout` | integer | Auto-disconnect on silence (seconds) |
+    | `noise_cancellation_model` | string | "none" or "BVE" |
+    | `realtime_turn_detection_type` | string | VAD algorithm |
+    | `realtime_turn_detection_threshold` | float | Sensitivity (0.0 - 1.0) |
+  </Tab>
+</Tabs>
+
+---
+
+## Knowledge Base
+
+Upload documents to your agent for **Retrieval-Augmented Generation (RAG)**:
+
+1. Go to your agent's page → **Knowledge Base** tab
+2. Upload files (PDF, DOCX, TXT)
+3. Enable the **RAG** toggle
+4. The agent will now search uploaded documents during conversations and use relevant content in responses
+
+<Info>Documents are indexed using LlamaIndex with OpenAI embeddings. The index is rebuilt when files are added or removed.</Info>
+
+---
+
+## Best Practices
+
+- **Keep system prompts focused** — agents perform better with clear, specific instructions
+- **Use dynamic variables** for personalization: `{{customer_name}}` and `{{account_number}}`
+- **Test with web calls first** — use the dashboard's Test Call feature before going live with phone calls
+- **Set reasonable timeouts** — a 5-minute max duration prevents runaway calls
+- **Monitor cost per call** — different providers have significantly different pricing

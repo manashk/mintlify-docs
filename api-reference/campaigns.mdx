@@ -1,0 +1,146 @@
+---
+title: "Campaigns API"
+sidebarTitle: "Campaigns"
+description: "Create, manage, and execute outbound calling campaigns."
+icon: "bullhorn"
+---
+
+import { CodeGroup, ParamField, Expandable } from "mintlify/components";
+
+## Create Campaign
+
+**`POST /campaigns`**
+
+**Authentication:** JWT cookie (Developer+)
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/campaigns" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "name": "Valentine Promo",
+    "description": "February promotion outreach",
+    "phone_number": "+16505551234"
+  }'
+```
+
+```json Response (201)
+{
+  "id": "camp_001",
+  "name": "Valentine Promo",
+  "description": "February promotion outreach",
+  "phone_number": "+16505551234",
+  "status": "created",
+  "total_numbers": 0,
+  "created_at": "2026-02-11T00:30:00Z"
+}
+```
+</CodeGroup>
+
+---
+
+## Import CSV into Campaign
+
+**`POST /campaigns/{campaign_id}/import`**
+
+Upload phone numbers from a CSV file. Duplicates are automatically removed.
+
+```bash
+curl -X POST "https://api.vaani.ai/campaigns/camp_001/import" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -F "file=@promo_contacts.csv"
+```
+
+---
+
+## Add Numbers Manually
+
+**`POST /campaigns/{campaign_id}/numbers`**
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/campaigns/camp_001/numbers" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "phone_numbers": ["+14155551234", "+14155555678"]
+  }'
+```
+
+```json Response
+{
+  "added": 2,
+  "duplicates_removed": 0,
+  "total_numbers": 2
+}
+```
+</CodeGroup>
+
+---
+
+## Start Campaign
+
+**`POST /campaigns/{campaign_id}/start`**
+
+Begin calling all numbers in the campaign.
+
+```bash
+curl -X POST "https://api.vaani.ai/campaigns/camp_001/start" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+---
+
+## List All Campaigns
+
+**`GET /campaigns`**
+
+Returns all campaigns in the workspace.
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/campaigns" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+[
+  {
+    "id": "camp_001",
+    "name": "Valentine Promo",
+    "status": "completed",
+    "total_numbers": 50,
+    "called": 48,
+    "created_at": "2026-02-11T00:30:00Z"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get Campaign Details
+
+**`GET /campaigns/{campaign_id}`**
+
+Returns campaign details with per-number status.
+
+---
+
+## Update Campaign
+
+**`PUT /campaigns/{campaign_id}`**
+
+Update name, description, or phone number (only when status is `created`).
+
+---
+
+## Delete Campaign
+
+**`DELETE /campaigns/{campaign_id}`**
+
+```bash
+curl -X DELETE "https://api.vaani.ai/campaigns/camp_001" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```

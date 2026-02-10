@@ -1,0 +1,217 @@
+---
+title: "Phone Numbers API"
+sidebarTitle: "Phone Numbers"
+description: "Search, purchase, register, and manage SIP trunk phone numbers."
+icon: "phone-volume"
+---
+
+import { CodeGroup, Info, Warning, ParamField, Expandable } from "mintlify/components";
+
+## Search Available Numbers
+
+Search for available phone numbers from a provider.
+
+**`GET /sip/search-numbers`**
+
+**Authentication:** JWT cookie (Developer+)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `country_code` | string | ✅ | ISO country code (e.g., "US") |
+| `area_code` | string | — | Area code filter |
+| `provider` | string | ✅ | "twilio" or "vonage" |
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/sip/search-numbers?country_code=US&area_code=650&provider=twilio" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "numbers": [
+    {
+      "phone_number": "+16505551234",
+      "friendly_name": "(650) 555-1234",
+      "locality": "Palo Alto, CA",
+      "capabilities": {
+        "voice": true,
+        "sms": true,
+        "mms": false
+      }
+    },
+    {
+      "phone_number": "+16505555678",
+      "friendly_name": "(650) 555-5678",
+      "locality": "Mountain View, CA"
+    }
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+## Purchase Number
+
+Purchase an available number and auto-provision SIP trunks.
+
+**`POST /sip/purchase-number`**
+
+**Authentication:** JWT cookie (Admin)
+
+<Expandable title="Request Parameters">
+  <ParamField body="phone_number" type="string" required>E.164 format number to purchase</ParamField>
+  <ParamField body="provider" type="string" required>"twilio" or "vonage"</ParamField>
+  <ParamField body="country_code" type="string" required>ISO country code</ParamField>
+</Expandable>
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/sip/purchase-number" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "phone_number": "+16505551234",
+    "provider": "twilio",
+    "country_code": "US"
+  }'
+```
+
+```json Response (201)
+{
+  "id": "sip_001",
+  "phone_number": "+16505551234",
+  "provider": "twilio",
+  "sip_address": "sip.livekit.io",
+  "inbound_trunk_id": "trunk_in_001",
+  "outbound_trunk_id": "trunk_out_001",
+  "dispatch_rule_id": "rule_001",
+  "status": "active",
+  "created_at": "2026-02-11T00:30:00Z"
+}
+```
+</CodeGroup>
+
+<Info>This endpoint automatically creates three LiveKit resources: inbound trunk, outbound trunk, and dispatch rule.</Info>
+
+---
+
+## Register Custom SIP Trunk
+
+Register an existing SIP trunk (not purchased through Vaani).
+
+**`POST /sip/register`**
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/sip/register" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "sip_address": "custom-sip.provider.com",
+    "phone_number": "+442071234567",
+    "sip_provider": "custom",
+    "auth_username": "my_sip_user",
+    "auth_password": "my_sip_pass",
+    "krisp_enabled": true,
+    "label": "UK Office Line"
+  }'
+```
+
+```json Response (201)
+{
+  "id": "sip_002",
+  "phone_number": "+442071234567",
+  "sip_address": "custom-sip.provider.com",
+  "provider": "custom",
+  "status": "active"
+}
+```
+</CodeGroup>
+
+---
+
+## List All Phone Numbers
+
+**`GET /sip`**
+
+**Authentication:** JWT cookie or API key
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/sip" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+[
+  {
+    "id": "sip_001",
+    "phone_number": "+16505551234",
+    "sip_address": "sip.livekit.io",
+    "provider": "twilio",
+    "label": "Sales Line",
+    "agent_id": "ag_550e8400",
+    "status": "active"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Update SIP Trunk
+
+**`PUT /sip/{sip_id}`**
+
+<Warning>Updating a SIP trunk deletes and recreates the LiveKit trunks, causing a brief service interruption.</Warning>
+
+<CodeGroup>
+```bash Request
+curl -X PUT "https://api.vaani.ai/sip/sip_001" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "sip_address": "new-sip.provider.com",
+    "krisp_enabled": true
+  }'
+```
+
+```json Response
+{
+  "id": "sip_001",
+  "sip_address": "new-sip.provider.com",
+  "krisp_enabled": true,
+  "updated_at": "2026-02-11T01:00:00Z"
+}
+```
+</CodeGroup>
+
+---
+
+## Delete SIP Trunk
+
+**`DELETE /sip/{sip_id}`**
+
+**Authentication:** JWT cookie (Admin)
+
+Deletes the database record and the associated LiveKit trunks/dispatch rule.
+
+```bash
+curl -X DELETE "https://api.vaani.ai/sip/sip_001" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+---
+
+## Map Phone Number to Agent
+
+**`PATCH /sip/{sip_id}/map-agent`**
+
+```bash
+curl -X PATCH "https://api.vaani.ai/sip/sip_001/map-agent" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{"agent_id": "ag_550e8400"}'
+```

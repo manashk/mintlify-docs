@@ -1,0 +1,181 @@
+---
+title: "API Overview"
+sidebarTitle: "Overview"
+description: "Base URL, authentication, request format, pagination, and standard error responses for the Vaani API."
+icon: "code"
+---
+
+import { Info, Warning, CodeGroup } from "mintlify/components";
+
+## Base URL
+
+All API requests use this base URL:
+
+```
+https://api.vaani.ai
+```
+
+For local development:
+```
+http://localhost:8000
+```
+
+---
+
+## Authentication
+
+The Vaani API supports two authentication methods:
+
+### 1. JWT Token (Cookie-based)
+
+Authenticate by including the JWT access token as a cookie:
+
+```bash
+curl -X GET "https://api.vaani.ai/agents" \
+  -H "Cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Obtaining a token:**
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.vaani.ai/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "your_password"
+  }'
+```
+
+```json Response
+{
+  "email": "user@example.com",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+# access_token and refresh_token are set as httpOnly cookies
+```
+</CodeGroup>
+
+### 2. API Key (Header-based)
+
+For server-to-server integrations, use an API key:
+
+```bash
+curl -X GET "https://api.vaani.ai/agents" \
+  -H "x-api-key: vk_live_abc123def456..."
+```
+
+<Info>API keys are workspace-scoped — they can only access data within the workspace they were created in. See [API Keys](/security/api-keys) for creation instructions.</Info>
+
+---
+
+## Workspace Selection
+
+For JWT-authenticated requests, specify the workspace context with the `X-Workspace-Id` header:
+
+```bash
+curl -X GET "https://api.vaani.ai/agents" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -H "X-Workspace-Id: 550e8400-e29b-41d4-a716-446655440000"
+```
+
+If omitted, the user's `current_workspace_id` is used.
+
+---
+
+## HTTP Methods
+
+| Method | Usage |
+|--------|-------|
+| `GET` | Retrieve resources |
+| `POST` | Create a resource or trigger an action |
+| `PATCH` | Partially update a resource |
+| `PUT` | Fully replace a resource |
+| `DELETE` | Remove a resource |
+
+---
+
+## Common Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Content-Type` | Yes (POST/PUT/PATCH) | Always `application/json` |
+| `Cookie` | Yes (if JWT auth) | `access_token=YOUR_TOKEN` |
+| `x-api-key` | Yes (if API key auth) | Your workspace API key |
+| `X-Workspace-Id` | Optional | Override active workspace |
+
+---
+
+## Standard Error Response
+
+All errors follow a consistent format:
+
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```
+
+### HTTP Status Codes
+
+| Code | Meaning | Common Cause |
+|------|---------|-------------|
+| `200` | Success | Request completed normally |
+| `201` | Created | Resource created successfully |
+| `400` | Bad Request | Invalid input, missing required fields |
+| `401` | Unauthorized | Missing or invalid authentication |
+| `403` | Forbidden | Insufficient role/permissions |
+| `404` | Not Found | Resource doesn't exist or not in your workspace |
+| `409` | Conflict | Duplicate resource (e.g., phone number already registered) |
+| `422` | Validation Error | Request body fails Pydantic schema validation |
+| `500` | Server Error | Internal error — contact support |
+
+### Validation Error Format
+
+For `422` errors, the response includes field-level details:
+
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "agent_name"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+---
+
+## Pagination
+
+Endpoints that return lists support cursor-based pagination:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 1 | Page number |
+| `page_size` | integer | 25 | Items per page |
+
+```bash
+curl "https://api.vaani.ai/calls/logs?page=2&page_size=50" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+Response includes pagination metadata:
+
+```json
+{
+  "items": [...],
+  "total": 150,
+  "page": 2,
+  "page_size": 50,
+  "total_pages": 3
+}
+```
+
+---
+
+## Rate Limiting
+
+<Warning>Rate limiting is not currently implemented. All endpoints accept unlimited requests. This may change in a future release.</Warning>

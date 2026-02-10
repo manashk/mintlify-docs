@@ -1,0 +1,115 @@
+---
+title: "Environment Variables"
+sidebarTitle: "Environment Variables"
+description: "Complete reference of all environment variables required to configure the Vaani platform."
+icon: "key"
+---
+
+import { Info, Warning, Tabs, Tab } from "mintlify/components";
+
+## Overview
+
+Vaani uses environment variables for all configuration. Variables are loaded via `pydantic-settings` with optional `.env` file support.
+
+**`.env` file loading:** Automatic in `local`, `dev`, and `development` environments. Disabled in production (use Docker `env_file` or system env vars).
+
+---
+
+## Backend Variables
+
+<Tabs>
+  <Tab title="Core">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `ENV` | ✅ | `local` | Environment: local, dev, stage, prod |
+    | `LOAD_DOTENV` | ✅ | `1` | Enable .env file loading |
+    | `FRONTEND_URL` | — | `http://localhost:3000` | CORS allowed origin |
+    | `LOG_DIR` | ✅ | `/var/log/vaani` | Log file directory |
+    | `LOG_LEVEL` | ✅ | `INFO` | Logging level |
+    | `LOG_RETENTION_DAYS` | ✅ | `30` | Log file retention |
+    | `MAX_AGENT_SESSIONS` | ✅ | `10` | Max concurrent voice calls |
+    | `CELERY_TIMEZONE` | ✅ | `UTC` | Timezone for Celery Beat |
+  </Tab>
+
+  <Tab title="Database">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `PG_USER` | ✅ | `vaani` | PostgreSQL username |
+    | `PG_PASSWORD` | ✅ | `password` | PostgreSQL password (SecretStr) |
+    | `PG_HOST` | ✅ | `localhost` | PostgreSQL host |
+    | `PG_PORT` | ✅ | `5432` | PostgreSQL port |
+    | `PG_DB` | ✅ | `agent_studio_db` | Database name |
+    | `REDIS_URL` | ✅ | `redis://localhost:6379/1` | Redis connection string |
+  </Tab>
+
+  <Tab title="Auth & Security">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `JWT_API_SECRET` | ✅ | `your-secret-key` | JWT signing key (SecretStr). Must match UI. |
+  </Tab>
+
+  <Tab title="LiveKit">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `LIVEKIT_API_KEY` | ✅ | `APIxxxx` | LiveKit API key |
+    | `LIVEKIT_API_SECRET` | ✅ | `secret` | LiveKit API secret (SecretStr) |
+    | `LIVEKIT_URL` | ✅ | `wss://lk.example.com` | LiveKit server WebSocket URL |
+    | `LIVEKIT_SIP_URI` | ✅ | `sip.livekit.io` | LiveKit SIP endpoint |
+    | `LK_SIP_USER` | ✅ | `user` | Default SIP auth username |
+    | `LK_SIP_PASS` | ✅ | `pass` | Default SIP auth password (SecretStr) |
+  </Tab>
+
+  <Tab title="AI Providers">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `OPENAI_API_KEY` | ✅ | `sk-...` | OpenAI API key (SecretStr) |
+    | `GROQ_API_KEY` | — | `gsk_...` | Groq API key (if using Groq) |
+    | `DEEPGRAM_API_KEY` | — | `dg_...` | Deepgram API key |
+    | `ELEVENLABS_API_KEY` | — | `el_...` | ElevenLabs API key |
+    | `CARTESIA_API_KEY` | — | `ct_...` | Cartesia API key |
+    | `SARVAM_API_KEY` | — | `sv_...` | Sarvam API key |
+    | `RIME_API_KEY` | — | `rm_...` | Rime API key |
+    | `MURF_API_KEY` | — | `mf_...` | Murf API key |
+    | `INWORLD_API_KEY` | — | `iw_...` | Inworld API key |
+  </Tab>
+
+  <Tab title="Telephony">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `TWILIO_ACCOUNT_SID` | ✅ | `AC...` | Twilio account SID |
+    | `TWILIO_AUTH_TOKEN` | ✅ | `token` | Twilio auth token (SecretStr) |
+    | `VONAGE_API_KEY` | ✅ | `key` | Vonage API key |
+    | `VONAGE_API_SECRET` | ✅ | `secret` | Vonage API secret (SecretStr) |
+    | `VONAGE_ENCRYPTION_KEY` | ✅ | `key` | Vonage encryption key (SecretStr) |
+  </Tab>
+
+  <Tab title="Storage">
+    | Variable | Required | Example | Description |
+    |----------|----------|---------|-------------|
+    | `S3_BUCKET_NAME` | ✅ | `vaani-recordings` | S3 bucket for recordings |
+    | `S3_REGION` | ✅ | `us-east-1` | S3 region |
+    | `S3_ACCESS_KEY` | ✅ | `AKIA...` | S3 access key (SecretStr) |
+    | `S3_SECRET_KEY` | ✅ | `secret` | S3 secret key (SecretStr) |
+  </Tab>
+</Tabs>
+
+---
+
+## UI Variables
+
+| Variable | Required | Example | Description |
+|----------|----------|---------|-------------|
+| `NEXT_PUBLIC_ML_BACKEND_URL` | ✅ | `http://localhost:8000` | Backend API URL |
+| `JWT_API_SECRET` | ✅ | Same as backend | JWT secret (must match) |
+| `ALLOWED_BOT_ORIGINS` | — | `http://localhost:5173` | Allowed widget origins |
+
+---
+
+## Security Notes
+
+<Warning>
+- All `SecretStr` fields are masked in logs and debug output
+- Never commit `.env` files to version control
+- In production, use Docker `env_file` directive or platform-native secrets management
+- The `JWT_API_SECRET` **must be identical** across backend and UI
+</Warning>

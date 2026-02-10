@@ -1,0 +1,89 @@
+---
+title: "Chats API"
+sidebarTitle: "Chats"
+description: "Send messages to agents via text chat and retrieve conversation history."
+icon: "comments"
+---
+
+import { CodeGroup, Info, ParamField } from "mintlify/components";
+
+## Send Chat Message
+
+Send a text message to an agent and receive an AI response (non-voice interaction).
+
+**`POST /chats/interaction`**
+
+**Authentication:** JWT cookie or API key
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/chats/interaction" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "agent_id": "ag_550e8400",
+    "message": "What are your business hours?",
+    "session_id": "chat_session_001"
+  }'
+```
+
+```json Response
+{
+  "response": "Our business hours are Monday through Friday, 9 AM to 5 PM EST. We are closed on weekends and major holidays.",
+  "session_id": "chat_session_001",
+  "tokens_used": 85
+}
+```
+</CodeGroup>
+
+<Info>Chat interactions use the same system prompt and knowledge base as voice calls, providing consistent responses across channels.</Info>
+
+---
+
+## Get Chat Logs
+
+Retrieve chat conversation history.
+
+**`GET /chats/logs`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 1 | Page number |
+| `page_size` | integer | 25 | Items per page |
+| `agent_id` | string | — | Filter by agent |
+| `session_id` | string | — | Filter by session |
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/chats/logs?agent_id=ag_550e8400&page=1" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "items": [
+    {
+      "id": "chat_001",
+      "agent_id": "ag_550e8400",
+      "session_id": "chat_session_001",
+      "messages": [
+        {"role": "user", "content": "What are your business hours?"},
+        {"role": "assistant", "content": "Our business hours are Monday through Friday..."}
+      ],
+      "created_at": "2026-02-11T00:30:00Z"
+    }
+  ],
+  "total": 45,
+  "page": 1,
+  "page_size": 25
+}
+```
+</CodeGroup>
+
+---
+
+## Get Single Chat
+
+**`GET /chats/{chat_id}`**
+
+Returns full chat history for a specific conversation session.

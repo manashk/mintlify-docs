@@ -1,0 +1,118 @@
+---
+title: "Error Codes"
+sidebarTitle: "Error Codes"
+description: "Standard error response format and comprehensive error code reference."
+icon: "triangle-exclamation"
+---
+
+import { Info, Warning } from "mintlify/components";
+
+## Error Response Format
+
+All API errors return a JSON body with a `detail` field:
+
+```json
+{
+  "detail": "Human-readable error message"
+}
+```
+
+For validation errors (422), the format includes field-level details:
+
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "field_name"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+---
+
+## HTTP Status Codes
+
+### Success Codes
+
+| Code | Meaning | When Used |
+|------|---------|-----------|
+| `200` | OK | Successful GET, PUT, PATCH, DELETE |
+| `201` | Created | Successful POST that creates a resource |
+
+### Client Error Codes
+
+| Code | Meaning | Common Causes |
+|------|---------|--------------|
+| `400` | Bad Request | Invalid input, malformed request body, invalid phone number format |
+| `401` | Unauthorized | Missing authentication, expired JWT, invalid API key |
+| `403` | Forbidden | Insufficient role permissions (e.g., Member trying to create an agent) |
+| `404` | Not Found | Resource doesn't exist, or not in the user's workspace |
+| `409` | Conflict | Duplicate resource (e.g., registering an already-registered phone number) |
+| `422` | Validation Error | Request body fails Pydantic schema validation |
+
+### Server Error Codes
+
+| Code | Meaning | Common Causes |
+|------|---------|--------------|
+| `500` | Internal Server Error | Unhandled exception, database error, external service failure |
+
+---
+
+## Common Error Messages
+
+### Authentication Errors
+
+| Message | Code | Cause | Fix |
+|---------|------|-------|-----|
+| `"Invalid or missing token"` | 401 | No `access_token` cookie or invalid JWT | Re-login or check JWT_API_SECRET |
+| `"Token expired"` | 401 | JWT has expired | Call `POST /auth/refresh` |
+| `"Invalid API key"` | 401 | API key doesn't exist in database | Verify key or create a new one |
+| `"User not found"` | 401 | JWT references deleted user | Re-register |
+
+### Authorization Errors
+
+| Message | Code | Cause | Fix |
+|---------|------|-------|-----|
+| `"Insufficient permissions"` | 403 | User's role is too low | Request role upgrade from workspace admin |
+| `"Not a member of this workspace"` | 403 | User doesn't belong to the workspace | Get invited by an admin |
+| `"Admin access required"` | 403 | Endpoint requires Admin role | Contact workspace admin |
+
+### Resource Errors
+
+| Message | Code | Cause | Fix |
+|---------|------|-------|-----|
+| `"Agent not found"` | 404 | Agent ID doesn't exist or wrong workspace | Verify ID and workspace |
+| `"Phone number already registered"` | 409 | SIP trunk for this number exists | Use the existing trunk or delete first |
+| `"Batch is currently running"` | 400 | Tried to delete a running batch | Wait for completion |
+| `"File too large"` | 400 | Uploaded file exceeds limit | Use smaller file or compress |
+
+### External Service Errors
+
+| Message | Code | Cause | Fix |
+|---------|------|-------|-----|
+| `"LiveKit SIP error: ..."` | 500 | SIP trunk creation failed | Check LiveKit connectivity and credentials |
+| `"Twilio error: ..."` | 500 | Phone number purchase failed | Check Twilio balance and credentials |
+| `"S3 error: ..."` | 500 | Recording URL generation failed | Check S3 credentials and bucket config |
+
+---
+
+## Pagination
+
+Paginated endpoints include these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | array | Current page of results |
+| `total` | integer | Total number of items |
+| `page` | integer | Current page number |
+| `page_size` | integer | Items per page |
+| `total_pages` | integer | Total number of pages |
+
+---
+
+## Rate Limiting
+
+<Warning>Rate limiting is **not currently implemented**. All endpoints accept unlimited requests. Plan to implement rate limiting using `slowapi` or nginx-level throttling in a future release.</Warning>

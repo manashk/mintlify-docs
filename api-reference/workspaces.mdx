@@ -1,0 +1,176 @@
+---
+title: "Workspaces API"
+sidebarTitle: "Workspaces"
+description: "Create workspaces, manage members, switch contexts, and configure workspace settings."
+icon: "building"
+---
+
+import { CodeGroup, Info, Warning, ParamField } from "mintlify/components";
+
+## Create Workspace
+
+**`POST /workspaces`**
+
+**Authentication:** JWT cookie
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/workspaces" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "name": "Acme Corp",
+    "type": "team"
+  }'
+```
+
+```json Response (201)
+{
+  "id": "ws_550e8400",
+  "name": "Acme Corp",
+  "slug": "acme-corp",
+  "type": "team",
+  "created_at": "2026-02-11T00:30:00Z"
+}
+```
+</CodeGroup>
+
+<Info>The creator is automatically assigned the **Admin** role. A URL-safe slug is auto-generated from the workspace name.</Info>
+
+---
+
+## List My Workspaces
+
+**`GET /workspaces`**
+
+Returns all workspaces the authenticated user belongs to.
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/workspaces" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+[
+  {
+    "id": "ws_550e8400",
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "type": "team",
+    "role": "admin"
+  },
+  {
+    "id": "ws_771f9500",
+    "name": "Side Project",
+    "slug": "side-project",
+    "type": "personal",
+    "role": "admin"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Switch Active Workspace
+
+**`POST /workspaces/{workspace_id}/switch`**
+
+Updates the user's `current_workspace_id` so subsequent requests use this workspace by default.
+
+```bash
+curl -X POST "https://api.vaani.ai/workspaces/ws_550e8400/switch" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+---
+
+## List Members
+
+**`GET /workspaces/{workspace_id}/members`**
+
+**Authentication:** JWT cookie (Member+)
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/workspaces/ws_550e8400/members" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+[
+  {
+    "user_id": "u_001",
+    "email": "alice@acme.com",
+    "name": "Alice Johnson",
+    "role": "admin",
+    "joined_at": "2026-01-15T10:30:00Z"
+  },
+  {
+    "user_id": "u_002",
+    "email": "bob@acme.com",
+    "name": "Bob Smith",
+    "role": "developer",
+    "joined_at": "2026-01-20T14:00:00Z"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Invite Member
+
+**`POST /workspaces/{workspace_id}/invite`**
+
+**Authentication:** JWT cookie (Admin)
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/workspaces/ws_550e8400/invite" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "email": "carol@acme.com",
+    "role": "developer"
+  }'
+```
+
+```json Response
+{
+  "message": "Member invited successfully",
+  "role": "developer"
+}
+```
+</CodeGroup>
+
+<Warning>If the email is not registered on Vaani, the invite is silently ignored in the current implementation. Full email-based invite flow is planned.</Warning>
+
+---
+
+## Remove Member
+
+**`DELETE /workspaces/{workspace_id}/members/{user_id}`**
+
+**Authentication:** JWT cookie (Admin)
+
+```bash
+curl -X DELETE "https://api.vaani.ai/workspaces/ws_550e8400/members/u_002" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+---
+
+## Delete Workspace
+
+**`DELETE /workspaces/{workspace_id}`**
+
+**Authentication:** JWT cookie (Admin)
+
+<Warning>This permanently deletes the workspace and all associated data (agents, calls, phone numbers). This action cannot be undone.</Warning>
+
+```bash
+curl -X DELETE "https://api.vaani.ai/workspaces/ws_550e8400" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```

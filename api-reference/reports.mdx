@@ -1,0 +1,147 @@
+---
+title: "Reports API"
+sidebarTitle: "Reports"
+description: "Retrieve dashboard metrics, call summaries, disposition analysis, and agent workload data."
+icon: "chart-mixed"
+---
+
+import { CodeGroup, Info, Tabs, Tab, ParamField, Expandable } from "mintlify/components";
+
+## Dashboard Summary
+
+Retrieve aggregated dashboard metrics.
+
+**`GET /reports/dashboard`**
+
+**Authentication:** JWT cookie or API key
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `start_date` | string | 7 days ago | ISO 8601 start date |
+| `end_date` | string | now | ISO 8601 end date |
+| `agent_id` | string | — | Filter by agent |
+| `call_type` | string | — | "phone" or "web" |
+| `interval` | string | auto | Time bucketing: "hour", "day", "week", "month" |
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/reports/dashboard?start_date=2026-02-01&end_date=2026-02-11&interval=day" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "summary": {
+    "total_calls": 1250,
+    "avg_duration": 142.5,
+    "total_cost": 28.75,
+    "cost_per_call": 0.023
+  },
+  "time_series": [
+    {"date": "2026-02-01", "calls": 120, "avg_duration": 135.2},
+    {"date": "2026-02-02", "calls": 145, "avg_duration": 148.7}
+  ],
+  "comparison": {
+    "calls_change_pct": 12.5,
+    "duration_change_pct": -3.2,
+    "cost_change_pct": 8.1
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## Call Summary Report
+
+Retrieve detailed call metrics with selectable fields.
+
+**`GET /reports/call-summary`**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fields` | string | Comma-separated metric names |
+| `start_date` | string | ISO 8601 start date |
+| `end_date` | string | ISO 8601 end date |
+| `agent_id` | string | Filter by agent |
+
+**Available fields:** `total_calls`, `total_duration`, `avg_duration`, `total_cost`, `cost_llm`, `cost_stt`, `cost_tts`, `platform_cost`, `total_tokens`, `avg_tokens`
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/reports/call-summary?fields=total_calls,total_cost,avg_duration&start_date=2026-02-01" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "total_calls": 1250,
+  "total_cost": 28.75,
+  "avg_duration": 142.5
+}
+```
+</CodeGroup>
+
+---
+
+## Disposition Summary
+
+Analyze call outcomes by disposition type.
+
+**`GET /reports/disposition`**
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/reports/disposition?start_date=2026-02-01" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "dispositions": [
+    {"disposition": "appointment-booked", "count": 450, "percentage": 36.0},
+    {"disposition": "callback-requested", "count": 280, "percentage": 22.4},
+    {"disposition": "successful-transfer", "count": 200, "percentage": 16.0},
+    {"disposition": "hung-up", "count": 180, "percentage": 14.4},
+    {"disposition": "voicemail", "count": 100, "percentage": 8.0},
+    {"disposition": "do-not-call", "count": 40, "percentage": 3.2}
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+## Agent Workload (Prometheus)
+
+Retrieve real-time agent worker metrics.
+
+**`GET /reports/workload`**
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/reports/workload" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "active_sessions": 3,
+  "max_sessions": 10,
+  "cpu_percent": 42.5,
+  "memory_percent": 68.2,
+  "latency_p50_ms": {
+    "stt": 120,
+    "tts": 85,
+    "llm": 450
+  },
+  "latency_p95_ms": {
+    "stt": 250,
+    "tts": 180,
+    "llm": 1200
+  }
+}
+```
+</CodeGroup>
+
+<Info>Workload data is read directly from the agent worker's Prometheus metrics endpoint and parsed by the backend.</Info>

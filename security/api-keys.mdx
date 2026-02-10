@@ -1,0 +1,111 @@
+---
+title: "API Keys"
+sidebarTitle: "API Keys"
+description: "Create and manage workspace-scoped API keys for server-to-server integration."
+icon: "key"
+---
+
+import { Info, Warning, CodeGroup, Steps, Step } from "mintlify/components";
+
+## Overview
+
+API keys provide a way to authenticate server-to-server requests without user session cookies. Each key is scoped to a single workspace and has a defined permission level.
+
+```mermaid
+flowchart LR
+    A["Your Server"] -->|x-api-key header| B["⚡ Vaani API"]
+    B --> C["Validate key in DB"]
+    C --> D["Resolve workspace"]
+    D --> E["Return data"]
+    
+    style A fill:#6366F1,color:#fff
+    style E fill:#10B981,color:#fff
+```
+
+---
+
+## Creating an API Key
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to **Workspace Settings** → **API Keys**.
+  </Step>
+  <Step title="Generate Key">
+    Click **Create API Key**. Provide:
+    - **Name:** A descriptive label (e.g., "Production Integration")
+    - **Role:** Permission level — Member (read-only) or Developer (read-write)
+  </Step>
+  <Step title="Copy the Key">
+    The API key is shown **once**. Copy and store it securely.
+    
+    <Warning>The key value is hashed in the database and cannot be retrieved after creation. If lost, delete and create a new key.</Warning>
+  </Step>
+</Steps>
+
+---
+
+## Using API Keys
+
+Include the key in the `x-api-key` header:
+
+<CodeGroup>
+```bash curl
+curl -X GET "https://api.vaani.ai/agents" \
+  -H "x-api-key: vk_live_abc123def456"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.vaani.ai/agents",
+    headers={"x-api-key": "vk_live_abc123def456"}
+)
+```
+
+```javascript JavaScript
+const response = await fetch("https://api.vaani.ai/agents", {
+  headers: { "x-api-key": "vk_live_abc123def456" }
+});
+```
+</CodeGroup>
+
+---
+
+## API Key vs JWT
+
+| Feature | API Key | JWT Cookie |
+|---------|---------|-----------|
+| **Use case** | Server-to-server, integrations | Dashboard, browser |
+| **Workspace** | Fixed to key's workspace | User's active workspace |
+| **Expiration** | No expiration | 15 minutes (auto-refresh) |
+| **Rotation** | Manual (delete + create) | Automatic refresh |
+| **Multi-workspace** | One key per workspace | Switch via header |
+
+---
+
+## Managing Keys
+
+### List Keys
+
+**`GET /api-keys`**
+
+Returns key metadata (name, created date, role). Does **not** return the key value.
+
+### Delete Key
+
+**`DELETE /api-keys/{key_id}`**
+
+Immediately revokes the key. All requests using this key will fail with `401`.
+
+<Info>There is no limit on the number of API keys per workspace. Create separate keys for different integrations to enable independent revocation.</Info>
+
+---
+
+## Security Best Practices
+
+- **Never expose keys in client-side code** — API keys are for server-to-server use only
+- **Use separate keys per integration** — easier to rotate and revoke independently
+- **Use the minimum role** — prefer "Member" role for read-only integrations
+- **Rotate keys periodically** — delete old keys and create new ones
+- **Monitor usage** — check call logs for API key-originated requests

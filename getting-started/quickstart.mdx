@@ -1,0 +1,126 @@
+---
+title: "Quickstart"
+sidebarTitle: "Quickstart"
+description: "Get your first AI voice agent running in under 5 minutes."
+icon: "rocket"
+---
+
+import { Steps, Step, Info, Tip, Warning, CodeGroup } from "mintlify/components";
+
+## Your First Voice Agent
+
+Follow these steps to create an AI agent, connect a phone number, and handle your first call.
+
+```mermaid
+flowchart LR
+    A["1️⃣ Create Agent"] --> B["2️⃣ Connect Number"]
+    B --> C["3️⃣ Test Call"]
+    C --> D["4️⃣ View Analytics"]
+    style A fill:#6366F1,color:#fff
+    style B fill:#8B5CF6,color:#fff
+    style C fill:#A78BFA,color:#fff
+    style D fill:#C4B5FD,color:#fff
+```
+
+---
+
+## Step-by-Step Setup
+
+<Steps>
+  <Step title="Sign Up & Create a Workspace">
+    1. Navigate to the Vaani dashboard and create an account
+    2. After signing in, you'll be prompted to create your first **workspace**
+    3. Give it a name (e.g., "My Company") — this is your team's organizational unit
+    4. You'll be assigned the **Admin** role automatically
+  </Step>
+
+  <Step title="Create Your First Agent">
+    1. Go to **Agents** in the sidebar
+    2. Click **Create Agent**
+    3. Configure the basics:
+
+    | Setting | Recommended Value | Description |
+    |---------|------------------|-------------|
+    | Agent Name | "Sales Assistant" | Display name for your agent |
+    | LLM Provider | OpenAI | Language model provider |
+    | LLM Model | gpt-4o | Best balance of speed and quality |
+    | STT Provider | Deepgram | Speech-to-Text provider |
+    | TTS Provider | ElevenLabs | Text-to-Speech provider |
+    | System Prompt | "You are a helpful sales assistant for Acme Corp..." | Instructions for the agent |
+    | First Message | "Hello! Thanks for calling Acme Corp. How can I help you today?" | Greeting when call connects |
+
+    4. Click **Save**
+  </Step>
+
+  <Step title="Connect a Phone Number">
+    1. Go to **Phone Numbers** in the sidebar
+    2. Click **Purchase Number**
+    3. Select a provider (Twilio or Vonage) and country
+    4. Choose an available number and click **Purchase**
+    5. The system automatically creates SIP trunks (inbound + outbound) on LiveKit
+    6. Click **Map to Agent** and select your agent
+
+    <Info>The purchased number is now routed through LiveKit SIP to your AI agent. Any inbound call to this number will be handled automatically.</Info>
+  </Step>
+
+  <Step title="Make a Test Call">
+    You have two options:
+
+    **Option A: Web Call (from the dashboard)**
+    - Go to your agent's page and click **Test Call**
+    - This opens a web-based voice session via LiveKit WebRTC
+
+    **Option B: Phone Call**
+    - Dial the phone number you just purchased from any phone
+    - You'll hear your agent's first message and can start a conversation
+  </Step>
+
+  <Step title="View Call Analytics">
+    1. After the call ends, go to **Call Logs** in the sidebar
+    2. You'll see the call with:
+       - Duration, cost breakdown (LLM + STT + TTS)
+       - Full conversation transcript
+       - AI-generated call analysis (sentiment, summary, disposition)
+       - Recording playback
+  </Step>
+</Steps>
+
+---
+
+## Quick API Test
+
+If you prefer API-first, here's how to initiate an outbound call:
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.vaani.ai/calls/outbound_call" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "agent_phone_number": "+16505551234",
+    "phone_number_to_dial": "+14155559876",
+    "dynamic_variables": {
+      "customer_name": "John",
+      "appointment_date": "2026-02-15"
+    }
+  }'
+```
+
+```json Response
+{
+  "call_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "dynamic_variables": {
+    "customer_name": "John",
+    "appointment_date": "2026-02-15"
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## What's Next?
+
+- **[Core Concepts](/getting-started/core-concepts)** — Understand agents, workspaces, and the call lifecycle
+- **[Agent Configuration](/user-guide/agents)** — Deep dive into all 50+ agent settings
+- **[API Reference](/api-reference/overview)** — Full endpoint documentation with examples

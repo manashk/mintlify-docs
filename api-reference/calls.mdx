@@ -1,0 +1,186 @@
+---
+title: "Calls API"
+sidebarTitle: "Calls"
+description: "Generate tokens for web calls, initiate outbound calls, and retrieve call logs with recordings."
+icon: "phone"
+---
+
+import { CodeGroup, Info, Warning, ParamField, Expandable } from "mintlify/components";
+
+## Generate Access Token
+
+Generate a LiveKit access token for a web-based voice session.
+
+**`GET /calls/generate-token`**
+
+**Authentication:** JWT cookie or API key
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone` | string | ✅ | Agent phone number to connect to |
+| `id` | string | ✅ | Unique session identifier |
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/calls/generate-token?phone=%2B16505551234&id=session_001" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "identity": "web_session_001",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+</CodeGroup>
+
+---
+
+## Make Outbound Call
+
+Create a new outbound call from an agent to a target phone number.
+
+**`POST /calls/outbound_call`**
+
+**Authentication:** JWT cookie or API key
+
+<Expandable title="Request Parameters">
+  <ParamField body="agent_phone_number" type="string" required>Agent's phone number (source)</ParamField>
+  <ParamField body="phone_number_to_dial" type="string" required>Target phone number (destination)</ParamField>
+  <ParamField body="dynamic_variables" type="object">Key-value pairs injected into agent prompt</ParamField>
+</Expandable>
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/calls/outbound_call" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "agent_phone_number": "+16505551234",
+    "phone_number_to_dial": "+14155559876",
+    "dynamic_variables": {
+      "customer_name": "John Smith",
+      "account_id": "ACC-12345"
+    }
+  }'
+```
+
+```json Response
+{
+  "call_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "dynamic_variables": {
+    "customer_name": "John Smith",
+    "account_id": "ACC-12345"
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## Get Call Logs
+
+Retrieve paginated call logs with optional filters.
+
+**`GET /calls/logs`**
+
+**Authentication:** JWT cookie or API key
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 1 | Page number |
+| `page_size` | integer | 25 | Items per page |
+| `call_type` | string | — | Filter: "phone" or "web" |
+| `agent_id` | string | — | Filter by specific agent |
+| `start_date` | string | — | ISO 8601 date filter (start) |
+| `end_date` | string | — | ISO 8601 date filter (end) |
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/calls/logs?page=1&page_size=10&call_type=phone" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response
+{
+  "items": [
+    {
+      "call_log_id": "550e8400-e29b-41d4-a716-446655440000",
+      "agent_id": "ag_550e8400",
+      "agent_name": "Sales Bot",
+      "call_type": "phone",
+      "from_phone": "+14155559876",
+      "to_phone": "+16505551234",
+      "duration": 145.3,
+      "disconnect_reason": "caller_hangup",
+      "conversation": [
+        {"role": "assistant", "content": "Hello! How can I help you?"},
+        {"role": "user", "content": "I'd like to schedule an appointment."}
+      ],
+      "summary": "Customer called to schedule a dental cleaning.",
+      "sentiment": "positive",
+      "disposition": "appointment-booked",
+      "cost_llm": 0.0045,
+      "cost_stt": 0.0029,
+      "cost_tts": 0.0038,
+      "platform_cost": 0.01,
+      "total_cost": 0.0212,
+      "recording": "https://s3.amazonaws.com/recordings/mv/2026/02/11/550e8400.ogg?X-Amz-...",
+      "created_at": "2026-02-11T00:30:00Z"
+    }
+  ],
+  "total": 156,
+  "page": 1,
+  "page_size": 10,
+  "total_pages": 16
+}
+```
+</CodeGroup>
+
+---
+
+## Get Single Call Log
+
+**`GET /calls/{call_log_id}`**
+
+Returns the full call log with all fields (same schema as list item above).
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/calls/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+</CodeGroup>
+
+---
+
+## Export Call Logs (CSV)
+
+Download call logs as a CSV file.
+
+**`GET /calls/export-csv`**
+
+**Authentication:** JWT cookie or API key
+
+**Query Parameters:** Same filters as `GET /calls/logs`
+
+```bash
+curl -X GET "https://api.vaani.ai/calls/export-csv?start_date=2026-02-01&end_date=2026-02-11" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -o call_logs.csv
+```
+
+---
+
+## Error Responses
+
+| Status | Detail | Cause |
+|--------|--------|-------|
+| `400` | `"Invalid phone number format"` | Phone number missing or invalid |
+| `401` | `"Invalid or missing token"` | Authentication failed |
+| `404` | `"Call log not found"` | Call log doesn't exist in workspace |
+| `404` | `"Agent not found"` | Agent phone number not registered |

@@ -1,68 +1,94 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
-  "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+  "theme": "palm",
+  "name": "Vaani AI",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
+  },
   "navigation": {
     "tabs": [
       {
         "tab": "Guides",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "getting-started/quickstart",
+              "getting-started/core-concepts",
+              "getting-started/platform-overview"
             ]
           },
           {
-            "group": "Customization",
+            "group": "User Guide",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "user-guide/agents",
+              "user-guide/phone-numbers",
+              "user-guide/inbound-calls",
+              "user-guide/outbound-calls",
+              "user-guide/batch-calling",
+              "user-guide/campaigns",
+              "user-guide/knowledge-base",
+              "user-guide/reports-analytics",
+              "user-guide/workspaces"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Security",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "security/authentication",
+              "security/authorization",
+              "security/api-keys"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Reference",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "reference/error-codes",
+              "reference/glossary",
+              "reference/faq",
+              "reference/troubleshooting"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "API Reference",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/overview",
+              "api-reference/agents",
+              "api-reference/calls",
+              "api-reference/phone-numbers",
+              "api-reference/batch-jobs",
+              "api-reference/campaigns",
+              "api-reference/workspaces",
+              "api-reference/reports",
+              "api-reference/chats",
+              "api-reference/webhooks"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guide",
+        "groups": [
           {
-            "group": "Endpoint examples",
+            "group": "Developer Guide",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "developer-guide/local-setup",
+              "developer-guide/environment-variables",
+              "developer-guide/docker-deployment",
+              "developer-guide/extending-providers"
             ]
           }
         ]
@@ -71,52 +97,36 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Community",
+          "href": "https://vaani.ai/community",
+          "icon": "slack"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Status",
+          "href": "https://status.vaani.ai",
+          "icon": "signal"
         }
       ]
     }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@vaani.ai"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://app.vaani.ai"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/vaani_ai",
+      "github": "https://github.com/vaani-ai",
+      "linkedin": "https://linkedin.com/company/vaani-ai"
     }
   }
 }
