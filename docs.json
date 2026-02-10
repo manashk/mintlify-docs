@@ -3,8 +3,8 @@
   "theme": "palm",
   "name": "Vaani AI",
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+    "dark": "/vaani_logo.svg",
+    "light": "/vaani_logo.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
