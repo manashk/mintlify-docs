@@ -1,0 +1,87 @@
+---
+title: "Maintenance Plan"
+sidebarTitle: "Maintenance Plan"
+description: "Process for keeping documentation current as the Vaani codebase evolves."
+icon: "wrench"
+---
+
+import { Info, Tip } from "mintlify/components";
+
+## Frequently Changing Areas
+
+### High Frequency (Weekly)
+
+| Area | Files | Why |
+|------|-------|-----|
+| Agent configuration | `agent.py`, `AgentCaller.py`, models | New features, tool functions |
+| LLM/STT/TTS plugins | `plugins/*.py` | New AI provider integrations |
+| Agent worker logic | `agent.py`, `saving_call_logs.py` | Lifecycle tuning |
+
+### Medium Frequency (Bi-weekly)
+
+| Area | Files | Why |
+|------|-------|-----|
+| API routers | `app/router/*.py` | New endpoints |
+| Transfer/call logic | `AgentCaller.py` | Flow improvements |
+| Database migrations | `alembic/` | Schema changes |
+
+### Low Frequency (Monthly)
+
+| Area | Files | Why |
+|------|-------|-----|
+| Auth & middleware | `middleware.ts`, `auth.py` | Stable auth layer |
+| Settings/config | `settings.py` | New env vars |
+| DevOps | `Dockerfile`, `docker-compose.yml` | Stable infra |
+
+---
+
+## Automation Ideas
+
+### CI/CD Documentation Hooks
+
+```yaml
+doc-check:
+  stage: validate
+  script:
+    - |
+      CHANGED=$(git diff --name-only $CI_MERGE_REQUEST_DIFF_BASE_SHA HEAD)
+      if echo "$CHANGED" | grep -q "app/db/models/"; then
+        echo "Database models changed - review docs"
+      fi
+      if echo "$CHANGED" | grep -q "plugins/"; then
+        echo "Agent plugins changed - review docs"
+      fi
+  only:
+    - merge_requests
+  allow_failure: true
+```
+
+---
+
+## PR Documentation Checklist
+
+```markdown
+- [ ] New models/schemas: Data model docs updated
+- [ ] New API endpoints: API reference updated
+- [ ] New env vars: Configuration docs updated
+- [ ] New provider: Tech stack updated
+- [ ] Breaking changes: Noted with date
+- [ ] New agent tool: Agent lifecycle docs updated
+```
+
+---
+
+## Recommended Ownership
+
+| Document | Owner | Review Cadence |
+|----------|-------|----------------|
+| Repository Overview | Tech Lead | Quarterly |
+| Architecture | Tech Lead | Quarterly |
+| Features Catalog | Product + Eng | Monthly |
+| API Endpoints | Engineering | Per-sprint |
+| Data Model | Engineering | Per-migration |
+| Integrations | Engineering | Per-integration |
+| Deployment Guide | DevOps | Quarterly |
+| Risks & Recommendations | Tech Lead | Monthly |
+
+<Tip>Keep a `Last Generated` timestamp in each document. Use git blame to track section updates.</Tip>

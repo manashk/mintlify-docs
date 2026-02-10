@@ -1,0 +1,61 @@
+---
+title: "Glossary"
+sidebarTitle: "Glossary"
+description: "Definitions of all domain-specific terms, abbreviations, and technical jargon used in the Vaani platform."
+icon: "book-bookmark"
+---
+
+## A–D
+
+| Term | Definition |
+|------|-----------|
+| **Agent** | An AI-powered virtual assistant that handles phone calls or web chats. Defined by ~50 configuration fields. |
+| **Agent Worker** | The LiveKit Agents process that executes real-time voice conversations. Runs `agent.py:entrypoint()`. |
+| **AgentCaller** | The class extending `livekit.agents.Agent` that implements conversation logic and tool functions. |
+| **Batch Item** | A single phone number within a batch job, with its own status tracking. |
+| **Batch Job** | A collection of phone numbers uploaded via CSV to be called in sequence/parallel by a specific agent. |
+| **Campaign** | A manual or CSV-imported collection of phone numbers for outbound calling, simpler than batch jobs. |
+| **Celery** | Distributed task queue used for batch call dispatching and scheduled tasks. Uses Redis as broker. |
+| **Cold Transfer** | Call transfer where the caller is immediately connected to the target without agent briefing. |
+| **Custom Function** | A webhook-based tool that the agent can invoke during conversation (e.g., check inventory). |
+| **Dispatch Rule** | A LiveKit SIP configuration that routes incoming calls on a trunk to an agent worker. |
+| **Disposition** | The outcome/result category of a call (e.g., "successful-transfer", "hung-up", "do-not-call"). |
+| **Dynamic Variables** | Template variables (e.g., `{{customer_name}}`) in system prompts replaced at runtime with per-call data. |
+
+## E–L
+
+| Term | Definition |
+|------|-----------|
+| **Egress** | LiveKit's recording service that captures audio/video from rooms and uploads to S3. |
+| **Entrypoint** | The `entrypoint()` async function in `agent.py` that handles the full lifecycle of a voice call. |
+| **Factory Pattern** | Design pattern used by `LLMFactory`, `STTFactory`, `TTSFactory` to create provider-specific instances. |
+| **Inbound Trunk** | A LiveKit SIP trunk that receives incoming calls from PSTN/telephony providers. |
+| **JWT** | JSON Web Token — used for user authentication. Stored as `access_token` cookie; signed with HS256. |
+| **Knowledge Base** | A collection of documents uploaded to an agent for RAG-based retrieval during conversations. |
+| **LiveKit** | Open-source real-time communication platform providing WebRTC, SIP gateway, and agent SDK. |
+| **LLM** | Large Language Model — the AI model powering the agent's conversation (e.g., GPT-4o, Groq). |
+
+## M–R
+
+| Term | Definition |
+|------|-----------|
+| **Outbound Trunk** | A LiveKit SIP trunk used to initiate outgoing calls to PSTN numbers. |
+| **Platform Cost** | Additional per-call cost charged by Vaani on top of provider costs. |
+| **Pre-signed URL** | A time-limited S3 URL for accessing call recordings without AWS credentials. |
+| **RAG** | Retrieval-Augmented Generation — LLM technique where relevant documents are injected into context. |
+| **RBAC** | Role-Based Access Control — authorization system with admin/developer/member roles per workspace. |
+
+## S–Z
+
+| Term | Definition |
+|------|-----------|
+| **SFU** | Selective Forwarding Unit — LiveKit's media routing architecture. |
+| **SIP** | Session Initiation Protocol — standard for voice call signaling over IP networks. |
+| **STT** | Speech-to-Text — converts spoken audio to text. Providers: Deepgram, Sarvam, Cartesia. |
+| **Superuser** | A platform-level admin flag on the `User` model that grants access to all workspaces. |
+| **TTS** | Text-to-Speech — converts text to spoken audio. 8 supported providers. |
+| **Turn Detection** | VAD algorithm that detects when a user has finished speaking. |
+| **VAD** | Voice Activity Detection — detects human speech in audio streams. |
+| **VUI Widget** | Voice User Interface widget — embeddable React component connecting to agents via WebRTC. |
+| **Warm Transfer** | Call transfer where the agent briefs the target party before connecting the caller. |
+| **Workspace** | A multi-tenant organizational unit. All data is scoped to a workspace. |

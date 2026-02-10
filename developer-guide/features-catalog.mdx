@@ -1,0 +1,253 @@
+---
+title: "Features Catalog"
+sidebarTitle: "Features Catalog"
+description: "All 10 major features mapped to implementing files, API endpoints, data models, validation rules, and known limitations."
+icon: "list-check"
+---
+
+import { Tabs, Tab, Info, Warning } from "mintlify/components";
+
+## Feature 1: Agent Configuration & Management
+
+### Business Description
+Users create and configure AI voice agents that handle phone calls and web interactions. Each agent has a unique phone number, LLM/STT/TTS provider selections, system prompt, custom functions, and call behavior settings.
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/agents` | List agents (workspace-scoped) |
+| `POST` | `/agents` | Create agent |
+| `GET` | `/agents/{id}` | Get agent by ID |
+| `PUT` | `/agents/{id}` | Update agent |
+| `DELETE` | `/agents/{id}` | Delete agent |
+| `POST` | `/agents/{id}/upload` | Upload knowledge base files |
+| `GET` | `/agents/{id}/files` | List uploaded files |
+| `DELETE` | `/agents/{id}/files/{filename}` | Delete a file |
+| `POST` | `/agents/{id}/query` | Query knowledge base (RAG) |
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `app/router/agent.py` | CRUD endpoints (496 lines) |
+| `app/db/models/agent.py` | `Agents` model (~50 columns) |
+| `app/db/schemas/agent.py` | `AI_Agent`, `AI_AgentAction` Pydantic schemas |
+
+<Warning>
+**Limitations:**
+- Single phone number per agent (no multi-number support)
+- Knowledge base files stored locally, not in S3
+- No agent versioning or rollback
+</Warning>
+
+---
+
+## Feature 2: Phone Number Provisioning (SIP Trunking)
+
+### Business Description
+Users can search, purchase, and configure phone numbers from Twilio or Vonage. Numbers are connected to LiveKit via SIP trunks for voice call routing.
+
+### Provisioning Flow
+
+```mermaid
+flowchart LR
+    A["Search Number"] --> B["Purchase"]
+    B --> C["Setup Provider Trunk"]
+    C --> D["Create LiveKit Trunks"]
+    D --> E["Persist SIP Record"]
+    E --> F["Map to Agent"]
+```
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/phonenumbers` | List phone numbers |
+| `GET` | `/phonenumbers/search` | Search available numbers |
+| `POST` | `/phonenumbers/purchase` | Buy and provision a number |
+| `POST` | `/phonenumbers/sip_trunk` | Register existing SIP trunk |
+| `PUT` | `/phonenumbers/map_agent` | Map agent to phone number |
+| `PUT` | `/phonenumbers/update_sip/{number}` | Update SIP trunk config |
+| `DELETE` | `/phonenumbers/delete_sip/{number}` | Delete SIP trunk |
+
+---
+
+## Feature 3: Voice Calls (Inbound & Outbound)
+
+### Business Description
+The platform handles real-time voice calls. Inbound calls arrive via SIP trunking; outbound calls are initiated via API. The agent worker manages the full call lifecycle.
+
+### Agent Built-in Tools
+
+| Tool | Purpose |
+|------|---------|
+| `end_call()` | Terminate the call |
+| `transfer_call()` | Cold or warm transfer |
+| `look_up_availability()` | Check appointment slots |
+| `confirm_appointment()` | Book appointment |
+| `detected_answering_machine()` | Handle voicemail detection |
+| `custom_function_call()` | Execute webhook-based custom function |
+
+### Call Recording
+- Recorded via LiveKit Egress to S3
+- Path: `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg`
+- Playback via pre-signed S3 URL (1-hour expiry)
+
+<Warning>
+**Limitations:**
+- Recording only in `.ogg` format
+- No real-time call monitoring by supervisors
+- Disconnect reason detection differs between Twilio and Vonage
+</Warning>
+
+---
+
+## Feature 4: Batch Calling
+
+### Business Description
+Users upload CSV files with phone numbers and dynamic variables, then schedule or immediately dispatch batch outbound calls with concurrency control.
+
+### Batch Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Upload: CSV upload
+    Upload --> Parse: Parse rows
+    Parse --> Create: Create BatchJob + Items
+    Create --> Dispatch: send_now=true
+    Create --> Schedule: Scheduled time
+    Schedule --> Dispatch: Celery Beat trigger
+    
+    state Dispatch {
+        [*] --> WaitCapacity
+        WaitCapacity --> CreateSIP: Capacity available
+        CreateSIP --> TrackStatus
+        TrackStatus --> WaitCapacity: Next item
+    }
+    
+    Dispatch --> Completed
+    Completed --> [*]
+```
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/batch` | List batch jobs |
+| `POST` | `/batch/upload` | Upload CSV + create batch |
+| `GET` | `/batch/{id}` | Get batch status + progress |
+| `PATCH` | `/batch/{id}` | Update batch schedule |
+| `DELETE` | `/batch/{id}` | Delete batch (not running) |
+
+---
+
+## Feature 5: Campaigns
+
+### Business Description
+Campaigns are collections of phone numbers to call using a specific agent — simpler than batch jobs.
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/campaigns` | Create campaign |
+| `GET` | `/campaigns` | List campaigns |
+| `POST` | `/campaigns/{id}/import_csv` | Import numbers from CSV |
+| `POST` | `/campaigns/{id}/add_numbers` | Add numbers manually |
+| `POST` | `/campaigns/{id}/start` | Start campaign execution |
+| `GET` | `/campaigns/{id}/status` | Campaign overall status |
+
+<Warning>
+**Limitations:**
+- Uses `BackgroundTasks` (not Celery) — no retry mechanism
+- No campaign pausing or resuming
+- Phone number deduplication on import but not on manual add
+</Warning>
+
+---
+
+## Feature 6: Workspaces & Multi-Tenancy
+
+### Business Description
+The platform supports multiple workspaces for team-based organization with RBAC.
+
+### Roles & Permissions
+
+| Role | Capabilities |
+|------|-------------|
+| `member` | View agents, calls, reports |
+| `developer` | Create/edit agents, SIP, campaigns, batches |
+| `admin` | Manage workspace settings, invite/remove members |
+
+---
+
+## Feature 7: Reports & Analytics
+
+### Dashboard Metrics
+- Total calls, avg duration, total cost, cost per call
+- Time-series call volume data (auto-bucketed)
+- Disposition donut charts
+- Period-over-period comparisons
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/reports/dashboard` | Main dashboard metrics |
+| `GET` | `/reports/call-summary` | Field-driven call summary |
+| `GET` | `/reports/disposition-summary` | Disposition breakdown |
+| `GET` | `/reports/workload` | Agent workload (Prometheus metrics) |
+
+---
+
+## Feature 8: Knowledge Base (RAG)
+
+### Flow
+
+```mermaid
+flowchart LR
+    A["Upload File<br/>PDF/DOCX/TXT"] --> B["LlamaIndex<br/>Processes File"]
+    B --> C["Vector Embeddings<br/>Created"]
+    C --> D["Index Stored<br/>Locally"]
+    D --> E["During Call<br/>Agent Queries Index"]
+    E --> F["Relevant Chunks<br/>Injected into LLM"]
+```
+
+---
+
+## Feature 9: Web Chat
+
+Text-based chat interactions with AI agents for testing and non-voice scenarios.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/chats` | Send message, get LLM response |
+| `GET` | `/chats` | List chat logs (paginated) |
+
+---
+
+## Feature 10: Call Transfer (Warm & Cold)
+
+### Warm Transfer Flow
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant Room as LiveKit Room
+    participant Target as Transfer Target
+    participant Caller as Original Caller
+
+    Agent->>Agent: Decide to transfer
+    Agent->>Agent: Generate handoff summary
+    Agent->>Room: Create new SIP participant
+    Room->>Target: Ring transfer target
+    Target->>Room: Answer
+    Agent->>Target: Deliver handoff text (TTS)
+    Agent->>Caller: Connect to target
+    Agent->>Room: Disconnect self
+```
+
+<Info>
+- Warm transfer retries configurable (default: 3 attempts)
+- Transfer target must be reachable via SIP
+- No three-way conferencing during transfer
+</Info>

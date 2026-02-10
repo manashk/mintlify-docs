@@ -1,0 +1,291 @@
+---
+title: "System Architecture"
+sidebarTitle: "Architecture"
+description: "High-level architecture, component interactions, runtime flows, authentication, data storage, and external integrations."
+icon: "sitemap"
+---
+
+import { Tabs, Tab, Info, Warning, Steps, Step } from "mintlify/components";
+
+## High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph Clients
+        UI["Next.js Dashboard"]
+        Widget["VUI Widget"]
+        Phone["PSTN/SIP Phone"]
+        APIKey["API Keys"]
+    end
+
+    subgraph Core["Core Platform"]
+        Backend["FastAPI Backend<br/>Port 8000"]
+        LiveKit["LiveKit Server<br/>SFU + SIP GW"]
+        AgentWorker["Agent Worker<br/>agent.py entrypoint()"]
+    end
+
+    subgraph Data["Data Layer"]
+        PG["PostgreSQL"]
+        Redis["Redis<br/>Cache + Queue"]
+        S3["AWS S3<br/>Recordings"]
+    end
+
+    subgraph AI["AI Providers"]
+        LLM["LLM<br/>OpenAI / Groq"]
+        STT["STT<br/>Deepgram / Sarvam"]
+        TTS["TTS<br/>8 Providers"]
+    end
+
+    subgraph Telephony["Telephony"]
+        Twilio["Twilio"]
+        Vonage["Vonage"]
+    end
+
+    UI -->|HTTPS| Backend
+    Widget -->|WSS| LiveKit
+    Phone -->|SIP/RTP| Telephony
+    APIKey -->|HTTPS| Backend
+
+    Telephony -->|SIP| LiveKit
+    LiveKit -->|Agent SDK| AgentWorker
+    Backend -->|SQL| PG
+    Backend -->|Cache| Redis
+    Backend -->|LiveKit API| LiveKit
+
+    AgentWorker --> PG
+    AgentWorker --> Redis
+    AgentWorker --> S3
+    AgentWorker --> LLM
+    AgentWorker --> STT
+    AgentWorker --> TTS
+```
+
+---
+
+## Component Interaction Map
+
+### Frontend → Backend → Database
+
+```mermaid
+sequenceDiagram
+    participant UI as Next.js UI
+    participant MW as middleware.ts
+    participant API as FastAPI Backend
+    participant DB as PostgreSQL
+    participant S3 as AWS S3
+
+    UI->>MW: Request with JWT cookie
+    MW->>MW: Verify JWT (jose)
+    alt Token expired
+        MW->>API: POST /auth/refresh
+        API-->>MW: New access_token
+    end
+    MW->>API: Proxy request
+    API->>API: get_current_user()
+    API->>API: require_workspace_access()
+    API->>DB: SQLAlchemy query
+    DB-->>API: Results
+    API-->>UI: JSON response
+```
+
+### Widget → LiveKit → Agent Worker
+
+```mermaid
+sequenceDiagram
+    participant W as VUI Widget
+    participant LK as LiveKit Server
+    participant AW as Agent Worker
+    participant LLM as LLM Provider
+    participant TTS as TTS Provider
+
+    W->>W: GET /calls/generate-token
+    W->>LK: Connect with AccessToken
+    LK->>AW: Dispatch job → entrypoint()
+    AW->>AW: Load agent config from DB
+    AW->>TTS: Deliver first_message
+    TTS-->>W: Audio stream
+    
+    loop Conversation
+        W->>LK: User audio
+        LK->>AW: STT → text
+        AW->>LLM: Process text
+        LLM-->>AW: Response
+        AW->>TTS: Synthesize speech
+        TTS-->>W: Audio stream
+    end
+```
+
+### Phone Call → SIP → LiveKit → Agent Worker
+
+```mermaid
+sequenceDiagram
+    participant PSTN as PSTN Caller
+    participant Tel as Twilio/Vonage
+    participant SIP as LiveKit SIP GW
+    participant Room as LiveKit Room
+    participant AW as Agent Worker
+
+    PSTN->>Tel: Dial number
+    Tel->>SIP: SIP INVITE
+    SIP->>SIP: Match dispatch rule
+    SIP->>Room: Create room
+    Room->>AW: Dispatch job
+    AW->>AW: entrypoint()
+    AW->>AW: Identify SIP participant
+    AW->>AW: Load agent config
+    AW->>PSTN: Start conversation
+```
+
+---
+
+## Runtime Flows
+
+### Application Startup
+
+<Tabs>
+  <Tab title="Backend (FastAPI)">
+    1. `gunicorn` starts with Uvicorn workers → `app/asgi.py` → `app/main.py`
+    2. `lifespan()` context manager initializes `httpx.AsyncClient` singleton
+    3. CORS middleware registered (all origins)
+    4. 14 routers registered under their prefixes
+    5. Health check at `GET /`
+  </Tab>
+  <Tab title="Agent Worker (LiveKit)">
+    1. `livekit-agents` CLI starts the worker process
+    2. Worker connects to LiveKit server via `LIVEKIT_URL`
+    3. Registers `entrypoint()` as the job handler
+    4. Waits for incoming room jobs (dispatch)
+  </Tab>
+  <Tab title="Celery Workers">
+    1. `celery -A app.workers.celery_app.celery worker` starts worker
+    2. `celery -A app.workers.celery_app.celery beat` starts scheduler
+    3. Connects to Redis as broker/backend
+    4. Processes batch dispatch tasks (`dispatch_batch`)
+  </Tab>
+</Tabs>
+
+### Request Lifecycle (REST API)
+
+```mermaid
+flowchart TD
+    A["HTTP Request"] --> B["CORS Middleware"]
+    B --> C["Route Handler Matched"]
+    C --> D["get_current_user()<br/>JWT cookie OR API key"]
+    D --> E["require_workspace_access()<br/>Resolve workspace_id"]
+    E --> F["get_db()<br/>SQLAlchemy session"]
+    F --> G["Handler Executes<br/>Business Logic"]
+    G --> H["Response Serialized<br/>via Pydantic Schema"]
+    H --> I["Session Closed"]
+```
+
+### Voice Call Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Setup: Job dispatched
+    
+    state Setup {
+        [*] --> Connect: Connect to room
+        Connect --> Detect: Detect call type
+        Detect --> LoadConfig: Query PostgreSQL
+        LoadConfig --> RenderPrompt: Render system_prompt
+        RenderPrompt --> InitPlugins: Init LLM/STT/TTS
+    }
+    
+    Setup --> Session: Plugins ready
+    
+    state Session {
+        [*] --> CreateAgent: Create AgentSession + VAD
+        CreateAgent --> StartRecording: LiveKit Egress → S3
+        StartRecording --> Greet: Deliver first_message
+        Greet --> ConvoLoop: Conversation loop
+        ConvoLoop --> ConvoLoop: LLM-driven turns
+    }
+    
+    Session --> Teardown: Disconnect
+    
+    state Teardown {
+        [*] --> StopRec: Stop recording
+        StopRec --> GetStatus: Query telephony status
+        GetStatus --> Costs: Compute token/costs
+        Costs --> Analysis: Run conversation analysis
+        Analysis --> Save: Save CallLog to DB
+    }
+    
+    Teardown --> [*]
+```
+
+---
+
+## Authentication & Authorization
+
+### Authentication Chain
+
+```mermaid
+flowchart TD
+    A["Request Arrives"] --> B{Cookie: access_token?}
+    B -->|Yes| C["JWT decode (HS256)"]
+    C --> D{Valid?}
+    D -->|Yes| E["Return user dict<br/>auth_type: user"]
+    D -->|Expired| F["Raise 401<br/>UI handles refresh"]
+    
+    B -->|No| G{Header: X-API-Key?}
+    G -->|Yes| H["authenticate_api_key()"]
+    H --> I["Return api_key dict<br/>auth_type: api_key"]
+    G -->|No| J["Raise 401"]
+```
+
+### Authorization (RBAC)
+
+| Operation | Required Role |
+|-----------|--------------|
+| View data (calls, agents, reports) | `member` |
+| Create/edit agents, SIP, campaigns | `developer` |
+| Manage workspaces, invite members | `admin` |
+| Platform administration | `superuser` (user flag) |
+
+---
+
+## Data Storage Design
+
+### PostgreSQL (Primary Database)
+
+| Table | Model | Expected Scale |
+|-------|-------|---------------|
+| `agents` | `Agents` | Hundreds |
+| `users` | `User` | Thousands |
+| `workspaces` | `Workspace` | Hundreds |
+| `user_workspaces` | `UserWorkspace` | Thousands |
+| `call_logs` | `CallLog` | **Millions** |
+| `logs` (SIP) | `SIP` | Hundreds |
+| `campaigns` | `Campaign` | Hundreds |
+| `batch_jobs` | `BatchJob` | Thousands |
+| `batch_items` | `BatchItem` | **Millions** |
+| `chat_logs` | `ChatLog` | Hundreds of K |
+
+### Redis
+
+- `livekit:active_calls` — Integer counter of concurrent calls (TTL: 600s)
+- Celery task results and queue messages
+
+### AWS S3
+
+- **Pattern:** `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg`
+- **Access:** Pre-signed URLs (1-hour expiry)
+
+---
+
+## External API Dependencies
+
+| Service | Purpose | Config Keys |
+|---------|---------|-------------|
+| **LiveKit** | Real-time media, SIP gateway | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL` |
+| **OpenAI** | LLM (GPT-4, GPT-4o), TTS, RAG | `OPENAI_API_KEY` |
+| **Groq** | LLM (fast inference) | `GROQ_API_KEY` |
+| **Deepgram** | STT (Nova-3), TTS | `DEEPGRAM_API_KEY` |
+| **ElevenLabs** | TTS (high quality) | `ELEVENLABS_API_KEY` |
+| **Cartesia** | STT, TTS | `CARTESIA_API_KEY` |
+| **Sarvam** | STT, TTS (Indian languages) | `SARVAM_API_KEY` |
+| **Twilio** | Phone provisioning, SIP trunking | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` |
+| **Vonage** | Phone provisioning, SIP trunking | `VONAGE_API_KEY`, `VONAGE_API_SECRET` |
+| **AWS S3** | Call recording storage | `S3_BUCKET_NAME`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` |

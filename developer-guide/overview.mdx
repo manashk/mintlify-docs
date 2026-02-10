@@ -1,0 +1,126 @@
+---
+title: "Internal Knowledge Base"
+sidebarTitle: "Overview"
+description: "A comprehensive, navigable reference for the Vaani AI voice agent platform — designed for Product, Engineering, QA, and Support teams."
+icon: "book-open"
+---
+
+import { Card, CardGroup, Steps, Step, Info, Tip } from "mintlify/components";
+
+## Executive Summary
+
+**Vaani** is a multi-tenant SaaS platform for building, deploying, and managing AI-powered voice agents. It enables organizations to create virtual phone agents that handle inbound and outbound calls using configurable LLM, Speech-to-Text, and Text-to-Speech providers.
+
+### Key Capabilities
+
+- 🤖 Configurable AI agents with ~50 settings per agent (LLM, STT, TTS, prompts, tools)
+- 📞 Dual telephony (Twilio + Vonage) with LiveKit SIP gateway
+- 🔄 Warm and cold call transfers with failover logic
+- 📊 Batch calling (CSV upload, Celery-based concurrency, per-item tracking)
+- 📈 Analytics dashboard with call summaries, dispositions, and Prometheus metrics
+- 🏢 Multi-tenant workspaces with RBAC (admin/developer/member)
+- 📚 Knowledge base upload with RAG (LlamaIndex-powered retrieval)
+- 💬 Web chat interface for text-based agent interaction
+- 🎙️ Call recording (LiveKit Egress → S3) with pre-signed URL playback
+
+**Architecture:** 4-service monorepo — FastAPI backend, LiveKit agent worker, Next.js dashboard, embeddable VUI widget. PostgreSQL primary database, Redis cache/queue, S3 recording storage.
+
+---
+
+## Document Index
+
+<CardGroup cols={2}>
+  <Card title="Repository Overview" icon="folder-tree" href="/developer-guide/repo-overview">
+    Codebase structure, technology stack, key files, and component map
+  </Card>
+  <Card title="System Architecture" icon="sitemap" href="/developer-guide/architecture">
+    Component interactions, runtime flows, auth/RBAC, data storage, queues
+  </Card>
+  <Card title="Features Catalog" icon="list-check" href="/developer-guide/features-catalog">
+    10 features mapped to files, APIs, models, validation, and limitations
+  </Card>
+  <Card title="API Endpoints" icon="plug" href="/developer-guide/api-endpoints">
+    All REST endpoints with methods, auth, schemas, and error codes
+  </Card>
+  <Card title="Data Model" icon="database" href="/developer-guide/data-model">
+    All database entities, fields, relationships, migrations, and lifecycle
+  </Card>
+  <Card title="Integrations" icon="puzzle-piece" href="/developer-guide/integrations">
+    Internal/external dependencies, SDKs, secrets, failure handling
+  </Card>
+  <Card title="Deployment Guide" icon="rocket" href="/developer-guide/deployment-guide">
+    Local setup, 30+ env vars, Docker, logging, monitoring, troubleshooting
+  </Card>
+  <Card title="Risks & Recommendations" icon="triangle-exclamation" href="/developer-guide/risks-recommendations">
+    20 risks categorized P0–P3 with actionable fixes
+  </Card>
+  <Card title="Maintenance Plan" icon="wrench" href="/developer-guide/maintenance-plan">
+    Doc update strategy, automation ideas, ownership, versioning
+  </Card>
+  <Card title="Developer FAQ" icon="circle-question" href="/developer-guide/dev-faq">
+    20 common questions for dev, support, product teams
+  </Card>
+  <Card title="Glossary" icon="book-bookmark" href="/developer-guide/dev-glossary">
+    35+ domain terms and abbreviations
+  </Card>
+</CardGroup>
+
+---
+
+## Recommended Onboarding Path
+
+<Info>Enable a new engineer to understand the entire system in **2–3 hours**.</Info>
+
+<Steps>
+  <Step title="Hour 1: Orientation">
+    1. Read this **Overview** page (executive summary + top insights)
+    2. Read [Repository Overview](/developer-guide/repo-overview) — understand the codebase structure
+    3. Read [System Architecture](/developer-guide/architecture) — understand how components connect
+    4. Scan [Glossary](/developer-guide/dev-glossary) — learn domain terminology
+  </Step>
+  <Step title="Hour 2: Deep Dive">
+    5. Read [Features Catalog](/developer-guide/features-catalog) — understand every feature
+    6. Read [API Endpoints](/developer-guide/api-endpoints) — know the API surface
+    7. Read [Data Model](/developer-guide/data-model) — understand the database
+  </Step>
+  <Step title="Hour 3: Operations">
+    8. Read [Integrations](/developer-guide/integrations) — external service dependencies
+    9. Read [Deployment Guide](/developer-guide/deployment-guide) — set up local environment
+    10. Read [Risks & Recommendations](/developer-guide/risks-recommendations) — know the pitfalls
+    11. Scan [FAQ](/developer-guide/dev-faq) — common questions answered
+  </Step>
+</Steps>
+
+---
+
+## Top 10 Critical Insights
+
+### 1. The `Agents` Model is the System's Heart
+The `Agents` table has ~50 columns controlling every aspect of agent behavior — from LLM provider choice to silence timeout thresholds. Understanding this model is essential.
+
+### 2. `agent.py:entrypoint()` is Where the Magic Happens
+This 877-line function orchestrates the entire real-time call lifecycle: connection → participant detection → config loading → conversation loop → post-call analytics.
+
+### 3. Factory Pattern Powers Provider Flexibility
+`LLMFactory`, `STTFactory`, `TTSFactory` abstract away 10+ AI providers. Adding a new provider means adding one conditional branch — no architectural changes needed.
+
+### 4. Warm Transfer Has Complex Failover Logic
+The transfer implementation in `AgentCaller.py` includes SIP participant creation, handoff text delivery, retry logic, and participant disconnection.
+
+### 5. Two Parallel Calling Systems Exist
+**Batch Jobs** (Celery-based, persistent, with concurrency control) and **Campaigns** (BackgroundTasks-based, simpler). They should probably be unified.
+
+### 6. Security Needs Immediate Attention
+Hardcoded DB credentials, wildcard CORS, and no rate limiting are production concerns. The `datetime.now()` default bug affects data integrity.
+
+### 7. Everything is Workspace-Scoped
+Multi-tenancy runs through `require_workspace_access()` — every data query filters by `workspace_id`.
+
+### 8. The Report Router is the Largest File (1365 Lines)
+It handles dashboards, call summaries, disposition analysis, and Prometheus metric parsing. It's a strong refactoring candidate.
+
+### 9. No Test Suite Exists
+Zero automated tests were found. This is the single biggest risk for ongoing development velocity.
+
+### 10. Post-Call Pipeline is Comprehensive
+After every call: cost computation, LLM-based conversation analysis, recording URL persistence, and optional webhook execution.

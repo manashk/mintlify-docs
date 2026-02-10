@@ -1,0 +1,125 @@
+---
+title: "Developer FAQ"
+sidebarTitle: "FAQ"
+description: "Frequently asked questions for developers, QA, support, and product teams about the Vaani platform."
+icon: "circle-question"
+---
+
+import { Info, Tip, Warning } from "mintlify/components";
+
+## Development
+
+### How do I add a new AI provider (LLM/STT/TTS)?
+
+1. Add `livekit-plugins-{provider}` dependency to `requirements.txt`
+2. Update the relevant factory class:
+   - LLM: `plugins/llm.py` → `LLMFactory.get_instance()`
+   - STT: `plugins/stt.py` → `STTFactory.get_instance()`
+   - TTS: `plugins/tts.py` → `TTSFactory.get_instance()`
+3. Add a new conditional branch matching the provider name
+4. Configure the API key in `settings.py` and `.env`
+5. Update the `Agents` model if new config fields are needed
+6. Update UI dropdowns in agent creation forms
+
+### How do I add a new API endpoint?
+
+1. Create or modify a router file in `app/router/`
+2. Define the endpoint: `@router.get/post/put/delete`
+3. Add auth: `workspace_id = Depends(require_workspace_access(WorkspaceRole.developer))`
+4. Create Pydantic schemas in `app/db/schemas/`
+5. Register in `app/main.py`: `app.include_router(new_router)`
+
+### How do I add a custom function (tool) to the agent?
+
+Custom functions are configured per-agent via the `custom_functions` JSON column:
+
+```json
+{
+  "name": "check_inventory",
+  "description": "Check if a product is in stock",
+  "url": "https://api.example.com/check",
+  "method": "POST",
+  "parameters": {
+    "product_id": {"type": "string", "description": "Product ID"}
+  },
+  "speak_during": "Let me check that for you",
+  "speak_after": "I have the result"
+}
+```
+
+The `AgentCaller` registers these as `@function_tool` methods at runtime via `utils/dynamic_tools.py`.
+
+---
+
+## Architecture
+
+### What's the difference between Batch Jobs and Campaigns?
+
+| Aspect | Batch Jobs | Campaigns |
+|--------|-----------|-----------|
+| **Execution** | Celery (distributed) | BackgroundTasks (in-process) |
+| **Scheduling** | Yes (Celery Beat) | No |
+| **Concurrency** | Redis semaphore | No |
+| **Per-item Status** | Detailed | Basic |
+| **Retry** | Celery auto-retry | No |
+
+### What happens when a call comes in?
+
+1. PSTN call → Twilio/Vonage → SIP to LiveKit
+2. LiveKit dispatch rule matches the phone number's inbound trunk
+3. New LiveKit room created
+4. Agent worker picks up via `entrypoint()`
+5. Worker loads agent config from PostgreSQL
+6. Conversation begins (STT → LLM → TTS loop)
+7. After call: recording to S3, call log to PostgreSQL
+
+### Where are call recordings stored?
+
+S3 at path `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg`. Backend generates pre-signed URLs (1hr expiry) for playback.
+
+---
+
+## Debugging & Support
+
+### How do I debug a failed batch job?
+
+1. Check status: `GET /batch/{batch_id}`
+2. Look at individual item errors in `batch_items` table
+3. Check Celery logs: `docker-compose logs celery-worker`
+4. Common issues: Redis unreachable, capacity limit hit, SIP errors
+
+### The agent isn't picking up calls. What's wrong?
+
+1. Verify agent worker is running and connected to LiveKit
+2. Check `LIVEKIT_URL` and API key configuration
+3. Verify phone number has SIP trunks configured
+4. Check Redis `livekit:active_calls` — might be at `MAX_AGENT_SESSIONS` limit
+5. Check agent worker logs for connection errors
+
+### How do I reset the active calls counter?
+
+```bash
+redis-cli SET livekit:active_calls 0
+```
+
+This key has a 600-second TTL as a safety net.
+
+---
+
+## Product
+
+### How many concurrent calls can the system handle?
+
+Controlled by `MAX_AGENT_SESSIONS` environment variable. The webhook handler tracks room events to maintain a count.
+
+### What languages are supported?
+
+Depends on the configured STT/TTS providers:
+- **Deepgram:** 36+ languages
+- **Sarvam:** Indian languages (Hindi, Tamil, etc.)
+- **OpenAI:** Multiple via TTS, limited STT languages
+- Language is configured per-agent via `STT_language` field
+
+### Is there billing/metering?
+
+Basic cost tracking per call (LLM, STT, TTS, platform costs). No integrated billing or payment gateway. Users have a `credit` field but it's not actively enforced.

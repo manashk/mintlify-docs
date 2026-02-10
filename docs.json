@@ -83,12 +83,39 @@
         "tab": "Developer Guide",
         "groups": [
           {
-            "group": "Developer Guide",
+            "group": "Overview",
+            "pages": [
+              "developer-guide/overview",
+              "developer-guide/repo-overview",
+              "developer-guide/architecture"
+            ]
+          },
+          {
+            "group": "Features & API",
+            "pages": [
+              "developer-guide/features-catalog",
+              "developer-guide/api-endpoints",
+              "developer-guide/data-model",
+              "developer-guide/integrations"
+            ]
+          },
+          {
+            "group": "Operations",
             "pages": [
               "developer-guide/local-setup",
               "developer-guide/environment-variables",
               "developer-guide/docker-deployment",
+              "developer-guide/deployment-guide",
               "developer-guide/extending-providers"
+            ]
+          },
+          {
+            "group": "Governance",
+            "pages": [
+              "developer-guide/risks-recommendations",
+              "developer-guide/maintenance-plan",
+              "developer-guide/dev-faq",
+              "developer-guide/dev-glossary"
             ]
           }
         ]

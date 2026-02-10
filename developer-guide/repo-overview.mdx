@@ -1,0 +1,289 @@
+---
+title: "Repository Overview"
+sidebarTitle: "Repository Overview"
+description: "Comprehensive overview of the Vaani monorepo structure, architecture, and technology stack for fast onboarding."
+icon: "folder-tree"
+---
+
+import { Tabs, Tab, Info, Tip, Warning } from "mintlify/components";
+
+## What Is Vaani?
+
+Vaani is a **multi-tenant AI voice agent SaaS platform** that enables creation, configuration, and deployment of AI-driven voice agents capable of:
+
+- Making and receiving **phone calls** via SIP/PSTN (Twilio, Vonage)
+- Interacting through a **web-based Voice UI (VUI) widget**
+- Running **batch outbound calling campaigns**
+- Performing **call transfers** (cold and warm)
+- Executing **custom functions** (webhooks) during calls
+- Conducting **post-call analysis** using LLMs
+- Recording calls and computing **cost/latency analytics**
+
+<Info>Built on top of **LiveKit** for real-time communication, with pluggable AI providers (OpenAI, Groq, Deepgram, ElevenLabs, Rime, Cartesia, Sarvam, Murf, Inworld).</Info>
+
+---
+
+## Repository Structure
+
+The repository is a **monorepo** containing four independent subprojects:
+
+```
+Voice_ai/
+├── agent-studio-backend/       # Python FastAPI backend API
+├── agent-studio-livekit-agent/ # Python LiveKit agent worker
+├── agent-studio-ui/            # Next.js admin/user dashboard
+└── agent-studio-vui-widget/    # Vite + React embeddable VUI widget
+```
+
+<Tabs>
+  <Tab title="Backend API">
+    | Aspect | Detail |
+    |--------|--------|
+    | **Language** | Python 3.12+ |
+    | **Framework** | FastAPI + Gunicorn + Uvicorn |
+    | **ORM** | SQLAlchemy (models + Alembic migrations) |
+    | **Database** | PostgreSQL |
+    | **Task Queue** | Celery + Redis |
+    | **Auth** | JWT (HS256) with access/refresh tokens |
+    | **Key Packages** | `pydantic`, `python-jose`, `livekit-api`, `llama-index`, `boto3` |
+
+    ```
+    agent-studio-backend/
+    ├── app/
+    │   ├── main.py                     # FastAPI app entry, router registration
+    │   ├── core/
+    │   │   ├── auth.py                 # JWT user extraction
+    │   │   ├── config/settings.py      # Pydantic settings (env vars)
+    │   │   └── logging.py              # AppLogger configuration
+    │   ├── router/                     # API route handlers
+    │   │   ├── agent.py                # CRUD + file upload + RAG retrieval
+    │   │   ├── call.py                 # Outbound call initiation
+    │   │   ├── batch_call.py           # Batch job CRUD
+    │   │   ├── campaign.py             # Campaign management
+    │   │   ├── sip.py                  # SIP trunk provisioning
+    │   │   ├── report.py               # Call analytics & reports
+    │   │   ├── chat.py                 # Web chat log endpoints
+    │   │   ├── dynamic_data.py         # Dynamic data collections
+    │   │   ├── workspaces.py           # Workspace CRUD & membership
+    │   │   ├── admin.py                # Superuser admin endpoints
+    │   │   ├── auth/                   # Login, signup, refresh, OAuth
+    │   │   ├── user.py                 # User profile endpoints
+    │   │   ├── api_key.py              # API key management
+    │   │   └── webhooks.py             # Inbound telephony webhooks
+    │   ├── db/
+    │   │   ├── databases.py            # SQLAlchemy engine & session
+    │   │   ├── models/                 # ORM models (12 files)
+    │   │   └── schemas/                # Pydantic request/response schemas
+    │   ├── services/
+    │   │   ├── livekit/                # LiveKit API wrappers
+    │   │   ├── telephony/              # Twilio & Vonage service layers
+    │   │   ├── cache/                  # Redis client
+    │   │   ├── llama_index_integration.py  # RAG indexing/querying
+    │   │   └── llm.py                  # LLM utility functions
+    │   ├── workers/
+    │   │   ├── celery_app.py           # Celery configuration
+    │   │   ├── batch_dispatcher.py     # Batch call dispatch logic
+    │   │   └── batch_scheduler.py      # Periodic task scheduling
+    │   └── utils/                      # Helpers (crypto, CSV, HTTP, etc.)
+    ├── alembic/                        # Database migrations
+    ├── scripts/                        # Operational scripts
+    ├── Dockerfile                      # Container build
+    └── docker-compose.yml              # Local dev environment
+    ```
+  </Tab>
+  <Tab title="Agent Worker">
+    | Aspect | Detail |
+    |--------|--------|
+    | **Language** | Python |
+    | **Framework** | LiveKit Agents SDK |
+    | **Role** | Real-time voice agent worker process |
+    | **Key Packages** | `livekit-agents`, `livekit-plugins-*`, `silero-vad` |
+
+    ```
+    agent-studio-livekit-agent/
+    ├── agent.py                # Main entrypoint (877 lines) — session lifecycle
+    ├── AgentCaller.py          # Agent class with @function_tool methods (801 lines)
+    ├── plugins/
+    │   ├── llm.py              # LLMFactory — OpenAI / Groq / Realtime
+    │   ├── stt.py              # STTFactory — Deepgram / Sarvam / Cartesia
+    │   └── tts.py              # TTSFactory — 8 providers
+    ├── utils/
+    │   ├── saving_call_logs.py # Post-call log persistence
+    │   ├── analyze_convo.py    # Conversation analysis
+    │   ├── call_status.py      # Twilio/Vonage call status providers
+    │   ├── compute_costs_summary.py  # Cost calculation
+    │   ├── dynamic_tools.py    # Runtime tool attachment for Realtime models
+    │   ├── requests_executor.py # Custom function HTTP executor
+    │   ├── util.py             # Helpers (JWT decode, template rendering)
+    │   ├── config.py           # Agent worker settings
+    │   ├── postgresdb.py       # Direct Postgres queries
+    │   ├── mongo.py            # MongoDB client (supplementary)
+    │   └── logger/             # Logging infrastructure
+    ├── Dockerfile
+    └── docker-compose.yml
+    ```
+  </Tab>
+  <Tab title="Dashboard UI">
+    | Aspect | Detail |
+    |--------|--------|
+    | **Language** | TypeScript |
+    | **Framework** | Next.js (App Router) |
+    | **Styling** | TailwindCSS |
+    | **Auth** | JWT via HTTP-only cookies, middleware-based |
+
+    ```
+    agent-studio-ui/
+    ├── app/
+    │   ├── (auth)/             # Login, signup pages
+    │   ├── (protected)/        # Dashboard, agents, logs, reports (149 files)
+    │   ├── admin/              # Superuser admin panel
+    │   ├── api/                # Next.js API routes
+    │   ├── bot-playground/     # Agent testing interface
+    │   └── providers/          # React context providers
+    ├── components/             # Shared UI components (56 files)
+    ├── hooks/                  # Custom React hooks (17 files)
+    ├── actions/                # Server actions (16 files)
+    ├── store/                  # Client state management
+    ├── types/                  # TypeScript type definitions (6 files)
+    ├── utils/                  # Utility functions (12 files)
+    ├── middleware.ts           # Auth middleware (JWT verify + refresh + role guard)
+    └── package.json
+    ```
+  </Tab>
+  <Tab title="VUI Widget">
+    | Aspect | Detail |
+    |--------|--------|
+    | **Language** | TypeScript |
+    | **Framework** | Vite + React |
+    | **Styling** | TailwindCSS |
+    | **Purpose** | Embeddable VUI for customer-facing websites |
+
+    ```
+    agent-studio-vui-widget/
+    ├── src/
+    │   ├── App.tsx             # Main widget app
+    │   ├── main.tsx            # Entry point, web component registration
+    │   ├── components/         # Widget UI components (21 files)
+    │   ├── hooks/              # LiveKit connection hooks
+    │   ├── store/              # Widget state management
+    │   └── utils/              # Token generation, helpers
+    ├── index.html
+    ├── vite.config.ts
+    └── package.json
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Technology Stack Summary
+
+| Layer | Technology |
+|-------|-----------| 
+| **Backend API** | Python 3.12+, FastAPI, SQLAlchemy, Alembic |
+| **Database** | PostgreSQL (primary), MongoDB (supplementary), Redis (cache + queue) |
+| **Task Queue** | Celery (Redis broker) |
+| **Agent Runtime** | LiveKit Agents SDK, Silero VAD, Krisp Noise Cancellation |
+| **LLM Providers** | OpenAI (GPT-4, GPT-4o, Realtime), Groq |
+| **STT Providers** | Deepgram (Nova-3), Sarvam, Cartesia |
+| **TTS Providers** | OpenAI, Deepgram, Rime, ElevenLabs, Inworld, Cartesia, Murf, Sarvam |
+| **Telephony** | Twilio, Vonage (SIP trunking via LiveKit) |
+| **Frontend** | Next.js 14+ (App Router), TailwindCSS |
+| **Widget** | Vite, React, TailwindCSS |
+| **Storage** | AWS S3 (call recordings) |
+| **Containerization** | Docker, Docker Compose |
+| **CI/CD** | GitLab CI (`.gitlab-ci.yml` in each subproject) |
+| **Auth** | JWT (HS256), HTTP-only cookies, refresh tokens |
+| **RAG** | LlamaIndex (vector embeddings for knowledge base) |
+
+---
+
+## API Architecture
+
+### Router Prefixes
+
+| Router | Prefix | File | Key Endpoints |
+|--------|--------|------|---------------|
+| Auth | `/auth` | `app/router/auth/` | Login, signup, refresh, OAuth |
+| Admin | `/admin` | `app/router/admin.py` | User mgmt, system stats |
+| User | `/users` | `app/router/user.py` | Profile CRUD |
+| Agents | `/agents` | `app/router/agent.py` | CRUD, file upload, RAG query |
+| SIP | `/sip` | `app/router/sip.py` | Trunk provisioning |
+| Campaign | `/campaign` | `app/router/campaign.py` | Campaign CRUD + execution |
+| Call | `/call` | `app/router/call.py` | Outbound call initiation |
+| Chat | `/chat` | `app/router/chat.py` | Web chat logs |
+| DynamicData | `/dynamic-data` | `app/router/dynamic_data.py` | Data collection CRUD |
+| Workspaces | `/workspaces` | `app/router/workspaces.py` | Workspace CRUD + membership |
+| Reports | `/reports` | `app/router/report.py` | Call analytics (46KB file) |
+| BatchCall | `/batch-call` | `app/router/batch_call.py` | Batch job CRUD + dispatch |
+| ApiKey | `/api-keys` | `app/router/api_key.py` | API key management |
+| Webhooks | `/webhooks` | `app/router/webhooks.py` | Inbound telephony webhooks |
+
+---
+
+## Agent Lifecycle (Runtime Flow)
+
+The core runtime flow when a call connects:
+
+```
+1. LiveKit dispatches a job → agent.py entrypoint()
+2. Connect to room, identify participants
+3. Detect call type: phone (SIP) vs web (widget)
+4. Determine call direction: inbound vs outbound
+5. Load assistant_data from PostgreSQL (via phone number lookup)
+6. Render system_prompt and first_message with dynamic variables
+7. Initialize LLM/STT/TTS via Factory classes
+8. Create AgentSession with VAD, turn detection, noise cancellation
+9. Initialize AgentCaller with @function_tool methods
+10. Start background tasks:
+    - enforce_max_duration()
+    - send_reminder_if_inactive()
+    - handling_silence_timeout()
+    - monitor_user_disconnect()
+11. Start recording (LiveKit Egress → S3)
+12. Deliver first_message (TTS or Realtime)
+13. Conversation loop (LLM-driven with tool calls)
+14. On disconnect:
+    - Stop recording
+    - Determine disconnection reason (Twilio/Vonage API)
+    - Compute usage metrics and costs
+    - Run post-call analysis (conversation_analysis)
+    - Save call log to PostgreSQL
+```
+
+---
+
+## Key Dependencies
+
+<Tabs>
+  <Tab title="Backend (Python)">
+    - `fastapi`, `uvicorn`, `gunicorn` — Web framework
+    - `sqlalchemy`, `alembic` — ORM + migrations
+    - `pydantic`, `pydantic-settings` — Data validation
+    - `celery[redis]` — Background task processing
+    - `livekit-api` — LiveKit server API
+    - `llama-index` — RAG indexing
+    - `twilio` — Twilio API
+    - `vonage` — Vonage API (via HTTP)
+    - `boto3` — AWS S3
+  </Tab>
+  <Tab title="Agent Worker (Python)">
+    - `livekit-agents` — Agent SDK
+    - `livekit-plugins-openai`, `livekit-plugins-groq` — LLM
+    - `livekit-plugins-deepgram`, `livekit-plugins-sarvam`, `livekit-plugins-cartesia` — STT
+    - `livekit-plugins-openai`, `livekit-plugins-deepgram`, `livekit-plugins-rime`, `livekit-plugins-elevenlabs`, `livekit-plugins-inworld`, `livekit-plugins-cartesia`, `livekit-plugins-murf`, `livekit-plugins-sarvam` — TTS
+    - `livekit-plugins-silero` — VAD
+    - `livekit-plugins-noise-cancellation` — Krisp NC
+  </Tab>
+  <Tab title="UI (TypeScript)">
+    - `next` — Framework
+    - `tailwindcss` — Styling
+    - `jose` — JWT verification (Edge-compatible)
+    - `zustand` or `context` — State management
+  </Tab>
+  <Tab title="Widget (TypeScript)">
+    - `vite` — Build tool
+    - `react` — UI library
+    - `@livekit/components-react` — LiveKit UI components
+  </Tab>
+</Tabs>

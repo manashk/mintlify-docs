@@ -1,0 +1,187 @@
+---
+title: "Risks & Recommendations"
+sidebarTitle: "Risks & Recommendations"
+description: "20 code-level risks, technical debt items, security concerns, and actionable recommendations categorized by severity."
+icon: "triangle-exclamation"
+---
+
+import { Warning, Info, Tip } from "mintlify/components";
+
+## Critical Risks (P0)
+
+### 1. Missing Return Statements in `LLMFactory.get_turn_detection()`
+
+**File:** `agent-studio-livekit-agent/plugins/llm.py`
+
+The `get_turn_detection()` method has conditional branches that construct config objects but lack explicit `return` statements, resulting in `None`.
+
+**Impact:** Turn detection silently fails — the agent may not detect when a user has stopped speaking.
+
+**Fix:** Add explicit `return` statements in both `if` and `else` branches.
+
+---
+
+### 2. Hardcoded Database Credentials in `docker-compose.yml`
+
+**File:** `agent-studio-backend/docker-compose.yml`
+
+PostgreSQL credentials are hardcoded rather than injected via environment variables.
+
+**Fix:** Use `${PG_PASSWORD}` environment variable interpolation or Docker Secrets.
+
+---
+
+### 3. Broad CORS Configuration
+
+**File:** `agent-studio-backend/app/main.py`
+
+CORS configured with `allow_origins=["*"]` and `allow_credentials=True`.
+
+<Warning>Any domain can make authenticated requests to the API.</Warning>
+
+**Fix:** Restrict to specific origins: `[settings.FRONTEND_URL, settings.WIDGET_URL]`
+
+---
+
+### 4. `datetime.now()` as Default Column Value
+
+**Files:** Multiple models (`user.py`, `workspace.py`, `campaign.py`, `batch_call.py`)
+
+Using `default=datetime.now()` (with parentheses) evaluates once at import time — all records share the same timestamp.
+
+**Fix:** Use `default=datetime.utcnow` (without parentheses) or `server_default=func.now()`
+
+---
+
+## High Risks (P1)
+
+### 5. Confusing Table Naming: `SIP` → `logs`
+
+The `SIP` model uses `__tablename__ = "logs"`, conflicting with the intuitive expectation that `logs` would contain call logs.
+
+**Fix:** Rename table to `sip_trunks` with a migration.
+
+---
+
+### 6. Unused Legacy Files
+
+`agent1.py` and `agent6.py` appear to be older versions of `agent.py` that are no longer referenced.
+
+**Fix:** Archive or delete after confirming they're unused.
+
+---
+
+### 7. Broad Exception Handling
+
+```python
+except Exception as e:
+    log.error(f"Error: {e}")
+    return {"error": str(e)}
+```
+
+**Impact:** Masks unexpected errors; makes debugging difficult.
+
+**Fix:** Catch specific exception types. Use Sentry or similar error tracking.
+
+---
+
+### 8. No Database Connection Pooling Configuration
+
+SQLAlchemy engine created with default pool settings. Pool exhaustion is possible under load.
+
+**Fix:** Configure `pool_size`, `max_overflow`, `pool_pre_ping=True`.
+
+---
+
+### 9. Auth Creates Extra DB Session
+
+`get_current_user()` creates its own `SessionLocal()` instead of the request-scoped `get_db()` — two separate connections per request.
+
+**Fix:** Refactor to accept `db: Session = Depends(get_db)`.
+
+---
+
+## Medium Risks (P2)
+
+### 10. Campaigns Use BackgroundTasks Instead of Celery
+
+Campaigns use FastAPI `BackgroundTasks` — no retry, no persistence, dies with process.
+
+**Fix:** Migrate to Celery for consistency with batch jobs.
+
+---
+
+### 11. Mixed Async/Sync Patterns
+
+Some `async def` handlers use synchronous DB operations; others have `async` handlers calling sync services.
+
+**Fix:** Standardize on async with `run_in_executor()` or fully synchronous handlers.
+
+---
+
+### 12. No Rate Limiting on Public Endpoints
+
+`/calls/generate-token`, `/auth/login`, `/auth/signup` have no rate limiting.
+
+**Fix:** Add rate limiting via `slowapi` or nginx-level throttling.
+
+---
+
+### 13. Knowledge Base Files Stored Locally
+
+Uploaded files are stored in `uploads/{agent_id}/` — lost on container restart unless volume mounted.
+
+**Fix:** Migrate to S3 or persistent shared storage.
+
+---
+
+### 14. Missing Test Suite
+
+No test files found in the repository.
+
+<Warning>This is the single biggest risk for ongoing development velocity.</Warning>
+
+**Fix:** Implement unit tests for auth flow, agent CRUD, batch dispatch, cost calculation, SIP provisioning.
+
+---
+
+### 15. Incomplete Invite Flow
+
+`workspaces.py:invite_member()` has `TODO: real invite flow`. If user doesn't exist, invite is silently ignored.
+
+**Fix:** Implement email-based invite with token verification.
+
+---
+
+## Low Risks (P3)
+
+| # | Risk | Effort |
+|---|------|--------|
+| 16 | No pagination for agent list | Low |
+| 17 | Inconsistent error response format | Medium |
+| 18 | Multiple DB connections in agent worker | Medium |
+| 19 | No API versioning (`/v1/` prefix) | Medium |
+| 20 | Missing input validation on some endpoints | Medium |
+
+---
+
+## Summary Table
+
+| # | Risk | Severity | Effort | Status |
+|---|------|----------|--------|--------|
+| 1 | Missing return in `get_turn_detection()` | **P0** | Low | Open |
+| 2 | Hardcoded DB credentials | **P0** | Low | Open |
+| 3 | Broad CORS | **P0** | Low | Open |
+| 4 | `datetime.now()` bug | **P0** | Low | Open |
+| 5 | `SIP` → `logs` table name | **P1** | Medium | Open |
+| 6 | Unused agent files | **P1** | Low | Open |
+| 7 | Broad exception handling | **P1** | High | Open |
+| 8 | No DB pool config | **P1** | Low | Open |
+| 9 | Auth creates extra DB session | **P1** | Medium | Open |
+| 10 | Campaigns not on Celery | **P2** | Medium | Open |
+| 11 | Mixed async/sync | **P2** | High | Open |
+| 12 | No rate limiting | **P2** | Low | Open |
+| 13 | Local file storage | **P2** | Medium | Open |
+| 14 | No test suite | **P2** | High | Open |
+| 15 | Incomplete invite flow | **P2** | Medium | Open |
+| 16–20 | Low-priority items | **P3** | Various | Open |

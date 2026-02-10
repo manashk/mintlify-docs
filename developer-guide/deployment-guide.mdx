@@ -1,0 +1,190 @@
+---
+title: "Deployment & DevOps Guide"
+sidebarTitle: "Deployment Guide"
+description: "How to run locally, required environment variables, Docker setup, logging, monitoring, and common issues."
+icon: "rocket"
+---
+
+import { Steps, Step, Tabs, Tab, Info, Warning, CodeGroup } from "mintlify/components";
+
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------| 
+| Python | 3.12+ | Backend + agent worker |
+| Node.js | 18+ | UI + widget |
+| PostgreSQL | 16 | Primary database |
+| Redis | 7+ | Cache + Celery broker |
+| Docker | 24+ | Containerized deployment |
+| Docker Compose | 3.9+ | Multi-container orchestration |
+| Git | Latest | Version control |
+
+---
+
+## Running Locally
+
+<Tabs>
+  <Tab title="Backend API">
+    <Steps>
+      <Step title="Clone and setup">
+        ```bash
+        cd agent-studio-backend
+        python -m venv venv
+        source venv/bin/activate  # or venv\Scripts\activate on Windows
+        pip install -r requirements.txt
+        ```
+      </Step>
+      <Step title="Configure environment">
+        ```bash
+        cp app/env/.env.example app/env/.env
+        # Edit .env with your credentials (see Environment Variables below)
+        ```
+      </Step>
+      <Step title="Start infrastructure">
+        ```bash
+        docker-compose up db redis -d
+        ```
+      </Step>
+      <Step title="Run migrations">
+        ```bash
+        alembic upgrade head
+        ```
+      </Step>
+      <Step title="Start the server">
+        ```bash
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Agent Worker">
+    ```bash
+    cd agent-studio-livekit-agent
+    pip install -r requirements.txt
+    # Configure .env with LiveKit and API keys
+    python agent.py dev
+    ```
+  </Tab>
+  <Tab title="Frontend UI">
+    ```bash
+    cd agent-studio-ui
+    npm install
+    cp .env.example .env.local
+    # Set NEXT_PUBLIC_ML_BACKEND_URL and JWT_API_SECRET
+    npm run dev
+    ```
+  </Tab>
+  <Tab title="VUI Widget">
+    ```bash
+    cd agent-studio-vui-widget
+    npm install
+    npm run dev
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Environment Variables
+
+### Backend (`app/core/config/settings.py`)
+
+| Variable | Required | Example | Description |
+|----------|----------|---------|-------------|
+| `ENV` | ✅ | `local` | Environment: local/dev/stage/prod |
+| `LOAD_DOTENV` | ✅ | `1` | Enable .env file loading |
+| `FRONTEND_URL` | | `http://localhost:3000` | CORS origin |
+| `OPENAI_API_KEY` | ✅ | `sk-...` | OpenAI API key |
+| `S3_BUCKET_NAME` | ✅ | `vaani-recordings` | S3 bucket name |
+| `S3_REGION` | ✅ | `us-east-1` | S3 region |
+| `S3_ACCESS_KEY` | ✅ | `AKIA...` | S3 access key |
+| `S3_SECRET_KEY` | ✅ | `SECRET` | S3 secret key |
+| `TWILIO_ACCOUNT_SID` | ✅ | `AC...` | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | ✅ | `TOKEN` | Twilio auth token |
+| `LIVEKIT_API_KEY` | ✅ | `API...` | LiveKit API key |
+| `LIVEKIT_API_SECRET` | ✅ | `SECRET` | LiveKit API secret |
+| `LIVEKIT_URL` | ✅ | `wss://lk.example.com` | LiveKit server URL |
+| `LIVEKIT_SIP_URI` | ✅ | `sip.livekit.io` | LiveKit SIP endpoint |
+| `JWT_API_SECRET` | ✅ | `SECRET` | JWT signing key (shared with UI) |
+| `PG_USER` | ✅ | `vaani` | PostgreSQL username |
+| `PG_PASSWORD` | ✅ | `password` | PostgreSQL password |
+| `PG_HOST` | ✅ | `localhost` | PostgreSQL host |
+| `PG_PORT` | ✅ | `5432` | PostgreSQL port |
+| `PG_DB` | ✅ | `agent_studio_db` | PostgreSQL database |
+| `REDIS_URL` | ✅ | `redis://localhost:6379/1` | Redis URL |
+| `MAX_AGENT_SESSIONS` | ✅ | `10` | Max concurrent calls |
+| `LOG_DIR` | ✅ | `/var/log/vaani` | Log directory |
+| `LOG_LEVEL` | ✅ | `INFO` | Logging level |
+
+### UI (`agent-studio-ui/.env.local`)
+
+| Variable | Required | Example | Description |
+|----------|----------|---------|-------------|
+| `NEXT_PUBLIC_ML_BACKEND_URL` | ✅ | `http://localhost:8000` | Backend API URL |
+| `JWT_API_SECRET` | ✅ | Same as backend | JWT secret (shared) |
+| `ALLOWED_BOT_ORIGINS` | | `http://localhost:5173` | Widget CORS origins |
+
+---
+
+## Docker Deployment
+
+### Docker Compose Services
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------| 
+| `db` | `postgres:16` | 5432 | PostgreSQL database |
+| `backend` | `agent-studio-backend:dev` | 8000 | FastAPI app |
+| `redis` | `redis:7` | 6379 | Cache + Celery broker |
+| `celery-worker` | Same as backend | — | Celery task worker |
+| `celery-beat` | Same as backend | — | Celery scheduler |
+
+### Quick Start
+
+```bash
+cd agent-studio-backend
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+
+# Rebuild after code changes
+docker-compose build backend
+docker-compose up -d backend
+```
+
+### Dockerfile Overview
+1. **Builder stage** — Python 3.12, install deps from `requirements.txt`, install LiveKit CLI (v2.4.14)
+2. **Runtime stage** — Slim image, copy site-packages, run as non-root `appuser`
+3. **Entrypoint:** `tini` → `gunicorn -k uvicorn.workers.UvicornWorker`
+
+---
+
+## Logging & Monitoring
+
+### Backend Logging
+- **Implementation:** `app/core/logging.py` → `AppLogger`
+- **Config:** `LOG_DIR`, `LOG_LEVEL`, `LOG_RETENTION_DAYS`
+- **Format:** JSON-file Docker driver with max 10MB × 5 files rotation
+
+### Prometheus Metrics
+Exposed by agent worker (accessed by `GET /reports/workload`):
+- Active agent sessions count
+- CPU/memory utilization
+- STT/TTS/LLM latency histograms
+- Request rates
+
+---
+
+## Common Deployment Issues
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `alembic upgrade` fails | DB migrations out of sync | Run `alembic stamp head` then `alembic upgrade head` |
+| LiveKit SIP trunk errors | LiveKit CLI version mismatch | Ensure `LK_VERSION=2.4.14` in Dockerfile |
+| Agent worker won't connect | Wrong `LIVEKIT_URL` or API keys | Verify LiveKit credentials and URL (wss://) |
+| Redis connection refused | Redis not started | Check `REDIS_URL` matches Docker service |
+| S3 presigned URL errors | S3_REGION has stray quotes | Backend strips quotes as workaround |
+| JWT verification fails | Different `JWT_API_SECRET` | Must be identical across backend and UI |
+| Celery tasks not executing | Beat not running | Start `celery-beat` service; check `REDIS_URL` |
+
+<Warning>Even trailing whitespace or newlines in `JWT_API_SECRET` can cause a mismatch between backend and UI. Copy-paste the value directly.</Warning>

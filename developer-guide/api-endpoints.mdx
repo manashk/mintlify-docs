@@ -1,0 +1,252 @@
+---
+title: "API Endpoints Reference"
+sidebarTitle: "API Endpoints"
+description: "All REST API endpoints grouped by module — methods, paths, auth requirements, request/response schemas, and error codes."
+icon: "plug"
+---
+
+import { Tabs, Tab, Info, Warning } from "mintlify/components";
+
+## Authentication
+
+All endpoints (except public auth routes) require one of:
+- **JWT cookie:** `access_token` cookie (HS256, issued by `/auth/login`)
+- **API key:** `X-API-Key` header (workspace-scoped)
+
+**Role abbreviations:** **M** = member, **D** = developer, **A** = admin, **S** = superuser
+
+---
+
+## Auth Module — `/auth`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/auth/login` | None | Login with email/password → JWT tokens |
+| `POST` | `/auth/signup` | None | Register new user |
+| `POST` | `/auth/refresh` | Refresh cookie | Refresh access token |
+| `POST` | `/auth/logout` | JWT | Clear auth cookies |
+| `POST` | `/auth/google` | None | Google OAuth login |
+| `POST` | `/auth/forgot-password` | None | Send password reset email |
+| `POST` | `/auth/reset-password` | None | Reset password with token |
+
+---
+
+## Agents Module — `/agents`
+
+### `POST /agents` — Create Agent
+**Auth:** D, A
+
+```json
+{
+  "phone_number": "+16505551234",
+  "LLM_provider": "open ai",
+  "LLM_model": "gpt-4o",
+  "STT_provider": "deepgram",
+  "TTS_provider": "openai",
+  "agent_name": "Sales Agent",
+  "system_prompt": "You are a helpful sales assistant...",
+  "first_message": "Hello! How can I help you today?",
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "max_call_duration": 300,
+  "custom_functions": [
+    {
+      "name": "check_inventory",
+      "description": "Check product availability",
+      "url": "https://api.example.com/inventory",
+      "method": "POST",
+      "parameters": {}
+    }
+  ]
+}
+```
+
+### All Agent Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/agents` | M, D, A | List agents (workspace-scoped) |
+| `POST` | `/agents` | D, A | Create agent |
+| `GET` | `/agents/{id}` | M, D, A | Get agent by ID |
+| `PUT` | `/agents/{id}` | D, A | Update agent |
+| `DELETE` | `/agents/{id}` | D, A | Delete agent |
+| `POST` | `/agents/{id}/upload` | D, A | Upload knowledge base files |
+| `GET` | `/agents/{id}/files` | M, D, A | List uploaded files |
+| `DELETE` | `/agents/{id}/files/{filename}` | D, A | Delete a file |
+| `POST` | `/agents/{id}/query` | M, D, A | Query knowledge base (RAG) |
+
+---
+
+## Calls Module — `/calls`
+
+### `GET /calls` — List Call Logs (Paginated)
+**Auth:** M, D, A
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `page` | int | Page number (default: 1) |
+| `page_size` | int | Items per page (default: 25, max: 100) |
+| `call_type` | string | `"web"` or `"phone"` |
+| `call_direction` | string | `"inbound"` or `"outbound"` |
+| `agent_id` | string | Filter by agent |
+| `disposition` | string | Call disposition filter |
+| `start_datetime` | string | Start of date range |
+| `end_datetime` | string | End of date range |
+| `batch_id` | UUID | Filter by batch job |
+
+**Response:**
+```json
+{
+  "items": [],
+  "total": 150,
+  "page": 1,
+  "page_size": 25,
+  "has_next": true,
+  "has_prev": false
+}
+```
+
+### `POST /calls/outbound_call` — Initiate Outbound Call
+**Auth:** JWT
+
+```json
+{
+  "agent_phone_number": "+16505551234",
+  "phone_number_to_dial": "+14155559876",
+  "dynamic_variables": {
+    "customer_name": "John",
+    "appointment_date": "2026-02-15"
+  }
+}
+```
+
+### All Call Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/calls/generate-token` | None | Generate LiveKit access token |
+| `GET` | `/calls` | M, D, A | List call logs (paginated, filtered) |
+| `GET` | `/calls/export` | M, D, A | Export call logs as CSV |
+| `GET` | `/calls/{id}` | M, D, A | Get single call log |
+| `POST` | `/calls/outbound_call` | JWT | Initiate outbound call |
+
+---
+
+## Phone Numbers Module — `/phonenumbers`
+
+### `POST /phonenumbers/sip_trunk` — Register SIP Trunk
+
+```json
+{
+  "sip_address": "sip.example.com",
+  "phone_number": "+16505551234",
+  "email": "user@example.com",
+  "provider": "vonage",
+  "auth_username": "user",
+  "auth_password": "pass",
+  "krisp_enabled": true,
+  "label": "Main Line"
+}
+```
+
+### All Phone Number Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/phonenumbers` | M, D, A | List phone numbers |
+| `GET` | `/phonenumbers/search` | None | Search available numbers |
+| `POST` | `/phonenumbers/purchase` | D, A | Purchase & provision |
+| `POST` | `/phonenumbers/sip_trunk` | D, A | Register SIP trunk |
+| `PUT` | `/phonenumbers/map_agent` | M, D, A | Map agent to number |
+| `PUT` | `/phonenumbers/update_sip/{number}` | D, A | Update SIP config |
+| `DELETE` | `/phonenumbers/delete_sip/{number}` | D, A | Delete SIP |
+
+---
+
+## Batch Module — `/batch`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/batch` | M, D, A | List batch jobs |
+| `POST` | `/batch/upload` | M, D, A | Upload CSV + create batch |
+| `GET` | `/batch/{id}` | M, D, A | Get batch status + progress |
+| `PATCH` | `/batch/{id}` | M, D, A | Update batch schedule |
+| `DELETE` | `/batch/{id}` | M, D, A | Delete batch |
+
+---
+
+## Campaigns Module — `/campaigns`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/campaigns` | D, A | Create campaign |
+| `GET` | `/campaigns` | M, D, A | List campaigns |
+| `GET` | `/campaigns/{id}` | JWT | Get campaign details |
+| `PUT` | `/campaigns/{id}` | D, A | Update campaign |
+| `DELETE` | `/campaigns/{id}` | D, A | Delete campaign |
+| `POST` | `/campaigns/{id}/import_csv` | JWT | Import numbers from CSV |
+| `POST` | `/campaigns/{id}/add_numbers` | JWT | Add numbers manually |
+| `DELETE` | `/campaigns/{id}/phone_numbers` | JWT | Delete number |
+| `POST` | `/campaigns/{id}/start` | JWT | Start campaign |
+| `GET` | `/campaigns/{id}/status` | JWT | Campaign status |
+
+---
+
+## Workspaces Module — `/workspaces`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/workspaces` | JWT | Create workspace |
+| `GET` | `/workspaces` | JWT | List workspaces (superuser: all) |
+| `GET` | `/workspaces/{id}` | M, D, A | Get workspace |
+| `PATCH` | `/workspaces/{id}` | A | Update workspace |
+| `DELETE` | `/workspaces/{id}` | A | Delete workspace |
+| `POST` | `/workspaces/switch` | JWT | Switch active workspace |
+| `GET` | `/workspaces/{id}/members` | M, D, A | List members |
+| `POST` | `/workspaces/{id}/invite` | A | Invite member |
+| `DELETE` | `/workspaces/{id}/members/{uid}` | A | Remove member |
+
+---
+
+## Reports Module — `/reports`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/reports/dashboard` | M, D, A | Dashboard data |
+| `GET` | `/reports/call-summary` | M, D, A | Call summary |
+| `GET` | `/reports/disposition-summary` | M, D, A | Disposition summary |
+| `GET` | `/reports/workload` | None | Agent workload (Prometheus) |
+
+---
+
+## Chats Module — `/chats`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/chats` | M, D, A | Chat interaction |
+| `GET` | `/chats` | M, D, A | List chat logs |
+
+---
+
+## Webhooks Module — `/webhook`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/webhook/livekit` | None | LiveKit webhook events |
+
+**Behavior:**
+- `room_started` → increment Redis `livekit:active_calls`
+- `room_finished` → decrement Redis `livekit:active_calls`
+
+---
+
+## Common Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Validation error / bad request |
+| `401` | Not authenticated / token expired |
+| `403` | Insufficient role / not a workspace member |
+| `404` | Resource not found |
+| `409` | Conflict (e.g., duplicate slug) |
+| `500` | Internal server error |
