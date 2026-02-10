@@ -1,0 +1,104 @@
+---
+title: "Account & Security"
+sidebarTitle: "Account & Security"
+description: "How to manage your account, understand roles, and secure your workspace."
+icon: "shield-check"
+---
+
+import { Steps, Step, Info, Warning, Tip } from "mintlify/components";
+
+## Signing Up
+
+<Steps>
+  <Step title="Create your account">
+    Go to the Vaani dashboard and click **Sign Up**. You can register with:
+    - **Email & password** — fill in your name, email, and a secure password
+    - **Google** — click "Sign in with Google" for one-click access
+  </Step>
+  <Step title="Create a workspace">
+    After signing in, you'll be prompted to create your first workspace. Give it a name (e.g., "My Company") — this is your team's organizational unit.
+  </Step>
+  <Step title="Start using Vaani">
+    You're now an **Admin** of your workspace. Head to the [Quickstart](/getting-started/quickstart) to create your first agent.
+  </Step>
+</Steps>
+
+---
+
+## Logging In
+
+- Navigate to the Vaani dashboard and enter your **email** and **password**
+- Or click **Sign in with Google** if you registered via Google
+- Your session stays active automatically — the platform handles token refresh behind the scenes
+
+<Tip>If you forget your password, click **Forgot Password** on the login page. You'll receive a reset link via email.</Tip>
+
+---
+
+## Understanding Roles
+
+Every workspace member has a role that determines what they can do:
+
+| Role | Capabilities |
+|------|-------------|
+| **Member** | View agents, call logs, reports, and analytics |
+| **Developer** | All Member permissions + create/edit agents, phone numbers, campaigns, batch jobs, and API keys |
+| **Admin** | All Developer permissions + manage workspace settings, invite/remove members, purchase phone numbers |
+
+<Info>You can belong to **multiple workspaces**, each with a different role. Use the workspace switcher in the dashboard to change your active workspace.</Info>
+
+---
+
+## Inviting Team Members
+
+If you're an **Admin**, you can invite others to your workspace:
+
+<Steps>
+  <Step title="Go to Workspace Settings">
+    Click **Settings** → **Members** in the sidebar.
+  </Step>
+  <Step title="Invite a member">
+    Enter their email address and choose a role (**Member**, **Developer**, or **Admin**).
+  </Step>
+  <Step title="They join">
+    The invited user will receive access to the workspace once they log in.
+  </Step>
+</Steps>
+
+---
+
+## API Keys
+
+API keys let you connect external systems (like your CRM or custom backend) to Vaani without using the dashboard.
+
+<Steps>
+  <Step title="Go to API Keys">
+    Navigate to **Workspace Settings** → **API Keys**.
+  </Step>
+  <Step title="Create a key">
+    Click **Create API Key**. Give it a descriptive name (e.g., "CRM Integration") and choose a permission level:
+    - **Member** — read-only access
+    - **Developer** — read and write access
+  </Step>
+  <Step title="Copy and save">
+    The key is shown **only once**. Copy it and store it securely.
+  </Step>
+</Steps>
+
+<Warning>If you lose an API key, you'll need to delete it and create a new one. The key value cannot be retrieved after creation.</Warning>
+
+### Best Practices
+
+- **Use separate keys** for each integration — makes it easy to revoke one without affecting others
+- **Use the minimum role** — choose "Member" for read-only integrations
+- **Never share keys** in public code, emails, or chat messages
+- **Rotate keys periodically** — delete old ones and create new replacements
+
+---
+
+## Security Tips
+
+- **Use a strong password** — at least 12 characters with a mix of letters, numbers, and symbols
+- **Don't share your login credentials** with other team members — invite them instead
+- **Review workspace members regularly** — remove anyone who no longer needs access
+- **Monitor your call logs** — unexpected activity may indicate unauthorized API key usage

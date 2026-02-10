@@ -13,20 +13,6 @@ Vaani is a **multi-tenant SaaS platform** for creating AI voice agents that cond
 Your agents can answer inbound calls, make outbound calls, transfer to humans, query knowledge bases, 
 and execute custom actions — all powered by configurable LLM, Speech-to-Text, and Text-to-Speech providers.
 
-```mermaid
-flowchart LR
-    A["📞 Phone Call"] --> B["LiveKit SIP Gateway"]
-    B --> C["🤖 AI Agent Worker"]
-    C --> D["🧠 LLM (GPT-4o / Groq)"]
-    C --> E["🎤 STT (Deepgram)"]
-    C --> F["🔊 TTS (ElevenLabs)"]
-    C --> G["📚 Knowledge Base"]
-    C --> H["⚡ Custom Functions"]
-    D --> C
-    E --> C
-    F --> C
-```
-
 ---
 
 ## Key Capabilities
@@ -50,7 +36,7 @@ flowchart LR
   </Card>
   <Card title="Knowledge Base (RAG)" icon="book">
     Upload documents (PDF, DOCX, TXT) and let your agent retrieve relevant 
-    context during conversations using RAG.
+    context during conversations.
   </Card>
   <Card title="Analytics Dashboard" icon="chart-mixed">
     Track call volume, duration, costs, dispositions, and agent performance 
@@ -77,37 +63,19 @@ flowchart LR
 
 ---
 
-## Try a Quick API Call
-
-Generate a LiveKit access token for a web-based voice session:
-
-```bash
-curl -X GET "https://api.vaani.ai/calls/generate-token?phone=+16505551234&id=session_001" \
-  -H "Cookie: access_token=YOUR_JWT_TOKEN"
-```
-
-```json Response
-{
-  "identity": "web_session_001",
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
----
-
 ## Explore the Docs
 
 <CardGroup cols={2}>
   <Card title="Quickstart Guide" icon="rocket" href="/getting-started/quickstart">
     Get your first agent up and running in under 5 minutes.
   </Card>
-  <Card title="API Reference" icon="code" href="/api-reference/overview">
-    Complete endpoint documentation with examples for every API.
+  <Card title="Core Concepts" icon="lightbulb" href="/getting-started/core-concepts">
+    Understand agents, workspaces, roles, and the call lifecycle.
   </Card>
   <Card title="User Guide" icon="book-open" href="/user-guide/agents">
     Step-by-step guides for every feature in the platform.
   </Card>
-  <Card title="Developer Setup" icon="terminal" href="/developer-guide/local-setup">
-    Set up the full development environment locally.
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Complete endpoint documentation with examples for every API.
   </Card>
 </CardGroup>

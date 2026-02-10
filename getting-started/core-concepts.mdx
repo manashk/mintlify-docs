@@ -7,42 +7,20 @@ icon: "lightbulb"
 
 import { Card, CardGroup, Info, Tip } from "mintlify/components";
 
-## Entity Relationship Map
+## How Vaani Works
+
+Vaani connects your AI agents to phone calls. When someone calls your agent's number — or when your agent calls out — the platform handles the entire conversation automatically.
 
 ```mermaid
-erDiagram
-    WORKSPACE ||--o{ USER_WORKSPACE : "has members"
-    USER ||--o{ USER_WORKSPACE : "belongs to"
-    WORKSPACE ||--o{ AGENT : contains
-    WORKSPACE ||--o{ SIP_TRUNK : contains
-    WORKSPACE ||--o{ CALL_LOG : contains
-    WORKSPACE ||--o{ BATCH_JOB : contains
-    WORKSPACE ||--o{ CAMPAIGN : contains
-    AGENT ||--o{ CALL_LOG : generates
-    AGENT ||--o{ SIP_TRUNK : "mapped to"
-    BATCH_JOB ||--o{ BATCH_ITEM : contains
-    BATCH_ITEM ||--o| CALL_LOG : produces
-
-    WORKSPACE {
-        uuid id
-        string name
-        string slug
-        string type
-    }
-    AGENT {
-        string id
-        string phone_number
-        string agent_name
-        string llm_provider
-        string system_prompt
-    }
-    CALL_LOG {
-        uuid call_log_id
-        string call_type
-        float duration
-        float total_cost
-        json conversation
-    }
+flowchart LR
+    A["📞 Phone Call"] --> B["Vaani Platform"]
+    B --> C["🤖 AI Agent"]
+    C --> D["🧠 Understands speech"]
+    C --> E["💬 Generates response"]
+    C --> F["🔊 Speaks back"]
+    
+    style B fill:#6366F1,color:#fff
+    style C fill:#8B5CF6,color:#fff
 ```
 
 ---
@@ -51,20 +29,20 @@ erDiagram
 
 <CardGroup cols={2}>
   <Card title="Workspace" icon="building">
-    The top-level organizational unit. All data — agents, calls, phone numbers — is scoped to a workspace. 
-    Think of it as a team or company account.
+    Your team's organizational unit. All data — agents, calls, phone numbers — is contained 
+    within a workspace. You can belong to multiple workspaces.
   </Card>
   <Card title="Agent" icon="robot">
-    An AI-powered virtual assistant configured with a system prompt, LLM choice, voice settings, 
+    An AI-powered virtual assistant configured with a system prompt, an LLM provider, voice settings, 
     and custom tools. Each agent has a unique phone number for receiving calls.
   </Card>
-  <Card title="Phone Number (SIP Trunk)" icon="phone">
-    A provisioned phone number from Twilio or Vonage, connected to LiveKit via SIP trunking. 
-    The number is mapped to an agent to route inbound calls.
+  <Card title="Phone Number" icon="phone">
+    A provisioned phone number from Twilio or Vonage, connected to your agent. 
+    Incoming calls to this number are automatically handled by the assigned agent.
   </Card>
   <Card title="Call Log" icon="clipboard-list">
-    A record of every call — including transcript, recording URL, token usage, cost breakdown, 
-    AI-generated analysis, and disposition.
+    A record of every call — including transcript, recording, cost breakdown, 
+    AI-generated summary, and disposition (outcome).
   </Card>
 </CardGroup>
 
@@ -72,107 +50,55 @@ erDiagram
 
 ## The Call Lifecycle
 
-Every voice call — whether inbound or outbound — follows this lifecycle:
+Every voice call follows this lifecycle:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Setup: Call initiated
-    Setup --> Session: Agent connected
-    Session --> Conversation: First message delivered
-    Conversation --> Conversation: User speaks ↔ Agent responds
-    Conversation --> Transfer: Transfer triggered
-    Transfer --> Conversation: Transfer failed (retry)
-    Transfer --> Teardown: Transfer complete
-    Conversation --> Teardown: Call ends
-    Teardown --> [*]: Call log saved
-
-    state Setup {
-        [*] --> DetectType: SIP or Web?
-        DetectType --> LoadConfig: Query agent from DB
-        LoadConfig --> InitProviders: Create LLM/STT/TTS
-    }
-
-    state Session {
-        [*] --> StartRecording
-        StartRecording --> DeliverGreeting
-        DeliverGreeting --> StartMonitors
-    }
-
-    state Teardown {
-        [*] --> StopRecording
-        StopRecording --> ComputeCosts
-        ComputeCosts --> AnalyzeConversation
-        AnalyzeConversation --> SaveCallLog
-    }
+flowchart LR
+    A["Call Connects"] --> B["Agent Greets Caller"]
+    B --> C["Conversation"]
+    C --> D["Call Ends"]
+    D --> E["Analysis & Recording Saved"]
+    
+    style A fill:#6366F1,color:#fff
+    style B fill:#7C3AED,color:#fff
+    style C fill:#8B5CF6,color:#fff
+    style D fill:#A78BFA,color:#fff
+    style E fill:#C4B5FD,color:#fff
 ```
 
-### Phase Breakdown
-
-| Phase | What Happens | Duration |
-|-------|-------------|----------|
-| **Setup** | Detect call type (SIP vs Web), load agent config, initialize LLM/STT/TTS providers | ~1-2 seconds |
-| **Session** | Start recording, deliver greeting, begin background monitors (duration, silence, reminders) | ~1 second |
-| **Conversation** | Real-time loop: STT captures speech → LLM generates response → TTS delivers audio | Entire call |
-| **Teardown** | Stop recording, compute costs, run AI analysis, save call log + recording to S3 | ~3-5 seconds |
+| Phase | What Happens |
+|-------|-------------|
+| **Connect** | The call is routed to the assigned AI agent |
+| **Greeting** | The agent delivers its configured first message |
+| **Conversation** | The agent listens, understands, and responds in real-time. It can use custom tools, query the knowledge base, or transfer the call |
+| **End** | Either party hangs up, or the agent ends the call |
+| **Post-Call** | A recording is saved, costs are calculated, and the conversation is analyzed for sentiment, summary, and disposition |
 
 ---
 
 ## Roles & Permissions
 
-Vaani uses a **Role-Based Access Control (RBAC)** system within each workspace:
+Vaani uses **Role-Based Access Control (RBAC)** within each workspace:
 
-```mermaid
-graph TD
-    A["🔑 Superuser"] --> B["👑 Admin"]
-    B --> C["🛠️ Developer"]
-    C --> D["👤 Member"]
-
-    style A fill:#DC2626,color:#fff
-    style B fill:#EA580C,color:#fff
-    style C fill:#CA8A04,color:#fff
-    style D fill:#16A34A,color:#fff
-```
-
-| Role | What they can do |
+| Role | What They Can Do |
 |------|-----------------|
 | **Member** | View agents, call logs, reports, and analytics |
 | **Developer** | Everything a Member can do, plus create/edit agents, phone numbers, campaigns, and batch jobs |
 | **Admin** | Everything a Developer can do, plus manage workspace settings, invite/remove members, delete workspace |
-| **Superuser** | Platform-level admin — access all workspaces, manage all users (flag on User model, not a workspace role) |
 
 <Info>Each user can belong to **multiple workspaces** with different roles in each. Switch between workspaces using the workspace selector in the dashboard.</Info>
 
 ---
 
-## AI Provider Stack
+## AI Providers
 
-Vaani uses a **factory pattern** that lets you mix and match providers for each agent:
+Vaani lets you mix and match AI providers for each agent:
 
-```mermaid
-graph TD
-    subgraph "Language Models (LLM)"
-        LLM1["OpenAI GPT-4o"]
-        LLM2["OpenAI GPT-4o Realtime"]
-        LLM3["Groq (fast inference)"]
-    end
-
-    subgraph "Speech-to-Text (STT)"
-        STT1["Deepgram Nova-3"]
-        STT2["Sarvam (Indian langs)"]
-        STT3["Cartesia"]
-    end
-
-    subgraph "Text-to-Speech (TTS)"
-        TTS1["OpenAI"]
-        TTS2["ElevenLabs"]
-        TTS3["Deepgram"]
-        TTS4["Rime"]
-        TTS5["Cartesia"]
-        TTS6["Sarvam"]
-        TTS7["Murf"]
-        TTS8["Inworld"]
-    end
-```
+| Component | Purpose | Available Providers |
+|-----------|---------|-------------------|
+| **LLM** | Understands conversation and generates responses | OpenAI GPT-4o, Groq |
+| **STT** | Converts caller's speech to text | Deepgram, Sarvam, Cartesia |
+| **TTS** | Converts agent's text to natural speech | OpenAI, ElevenLabs, Deepgram, Rime, Cartesia, Sarvam, Murf, Inworld |
 
 <Tip>Choose **GPT-4o** for accuracy, **Groq** for speed. For TTS, **ElevenLabs** offers the most natural voices while **Deepgram** provides the lowest latency.</Tip>
 
@@ -180,30 +106,30 @@ graph TD
 
 ## Dynamic Variables
 
-Personalize conversations by injecting variables into agent prompts at call time:
+Personalize conversations by injecting variables into agent prompts:
 
 ```
 System Prompt:
-"You are calling {{customer_name}} about their appointment on {{appointment_date}}.
-Their account number is {{account_id}}."
+"You are calling {{customer_name}} about their appointment on {{appointment_date}}."
 ```
 
-Variables are resolved at runtime from:
-- **Outbound calls** → passed in the API request body
-- **Batch calls** → extracted from CSV columns
-- **Dynamic data** → stored in the `dynamic_data` table and matched by phone number
+Variables are filled in automatically from:
+- **Outbound calls** — passed when initiating the call
+- **Batch calls** — extracted from your uploaded CSV columns
+- **Dynamic data** — stored in the platform and matched by phone number
 
 ---
 
-## Terminology Quick Reference
+## Key Terms
 
 | Term | Meaning |
 |------|---------|
-| **SIP Trunk** | A connection between a phone number and LiveKit for routing voice calls |
-| **Dispatch Rule** | A LiveKit rule that matches incoming SIP calls to an agent worker |
-| **Egress** | LiveKit's recording service that saves call audio to S3 |
-| **RAG** | Retrieval-Augmented Generation — the agent retrieves relevant documents to enhance LLM responses |
-| **Disposition** | The outcome of a call (e.g., "successful-transfer", "hung-up", "do-not-call") |
-| **VAD** | Voice Activity Detection — detects when a speaker starts/stops talking |
+| **Disposition** | The outcome of a call (e.g., "completed", "transferred", "no-answer") |
+| **Knowledge Base** | Documents uploaded to your agent so it can answer questions using your content |
+| **Batch Job** | A set of phone numbers to call automatically, uploaded via CSV |
+| **Campaign** | A simpler version of a batch job for quick outbound calling |
+| **Custom Function** | A webhook the agent can call during conversations (e.g., check inventory, book appointments) |
+| **Warm Transfer** | The agent briefs the human before connecting the caller |
+| **Cold Transfer** | The caller is connected directly to the human without briefing |
 
-See the [full glossary](/reference/glossary) for 35+ terms.
+See the [full glossary](/reference/glossary) for more terms.

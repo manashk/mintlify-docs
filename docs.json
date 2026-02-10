@@ -23,7 +23,7 @@
               "introduction",
               "getting-started/quickstart",
               "getting-started/core-concepts",
-              "getting-started/platform-overview"
+              "getting-started/account-security"
             ]
           },
           {
@@ -41,20 +41,16 @@
             ]
           },
           {
-            "group": "Security",
+            "group": "Account",
             "pages": [
-              "security/authentication",
-              "security/authorization",
               "security/api-keys"
             ]
           },
           {
-            "group": "Reference",
+            "group": "Help",
             "pages": [
-              "reference/error-codes",
-              "reference/glossary",
               "reference/faq",
-              "reference/troubleshooting"
+              "reference/glossary"
             ]
           }
         ]
@@ -74,7 +70,8 @@
               "api-reference/workspaces",
               "api-reference/reports",
               "api-reference/chats",
-              "api-reference/webhooks"
+              "api-reference/webhooks",
+              "api-reference/error-codes"
             ]
           }
         ]
@@ -87,7 +84,8 @@
             "pages": [
               "developer-guide/overview",
               "developer-guide/repo-overview",
-              "developer-guide/architecture"
+              "developer-guide/architecture",
+              "developer-guide/platform-overview"
             ]
           },
           {
@@ -106,7 +104,15 @@
               "developer-guide/environment-variables",
               "developer-guide/docker-deployment",
               "developer-guide/deployment-guide",
-              "developer-guide/extending-providers"
+              "developer-guide/extending-providers",
+              "developer-guide/troubleshooting"
+            ]
+          },
+          {
+            "group": "Security & Auth",
+            "pages": [
+              "developer-guide/authentication",
+              "developer-guide/authorization"
             ]
           },
           {

@@ -1,7 +1,7 @@
 ---
 title: "Glossary"
 sidebarTitle: "Glossary"
-description: "Definitions of all domain-specific terms, abbreviations, and technical jargon used in Vaani."
+description: "Definitions of key terms used throughout the Vaani platform."
 icon: "book-bookmark"
 ---
 
@@ -9,57 +9,39 @@ icon: "book-bookmark"
 
 | Term | Definition |
 |------|-----------|
-| **Agent** | An AI-powered virtual assistant that handles phone calls or web chats. Defined by ~50 configuration fields. |
-| **Agent Worker** | The LiveKit Agents process that executes real-time voice conversations. Runs `agent.py:entrypoint()`. |
-| **AgentCaller** | The class extending `livekit.agents.Agent` that implements conversation logic, tool functions, and call transfers. |
-| **Batch Job** | A collection of phone numbers (uploaded via CSV) to be called sequentially/in-parallel by a specific agent. |
-| **Batch Item** | A single phone number within a batch job, with its own status tracking (pending → calling → completed/failed). |
-| **Campaign** | A simplified outbound calling list, executed via BackgroundTasks (not Celery). Best for small-scale calls. |
-| **Celery** | Distributed task queue used for batch call dispatching and scheduled tasks. Uses Redis as broker. |
-| **Cold Transfer** | Call transfer where the caller is immediately connected to the target without agent briefing. |
-| **Custom Function** | A webhook-based tool that the agent can invoke during a conversation (e.g., check inventory, book appointment). |
-| **Dispatch Rule** | A LiveKit SIP configuration that routes incoming calls on a trunk to an available agent worker. |
-| **Disposition** | The AI-determined outcome/result category of a call (e.g., "successful-transfer", "hung-up", "do-not-call"). |
-| **Dynamic Variables** | Template variables (e.g., `{{customer_name}}`) in system prompts replaced at runtime with per-call data. |
+| **Agent** | An AI-powered virtual assistant that handles phone calls or web chats. You configure its behavior, voice, and personality. |
+| **Batch Job** | A set of phone numbers (uploaded via CSV) to be called automatically by an agent, with scheduling and progress tracking. |
+| **Batch Item** | A single phone number within a batch job, with its own status (pending, calling, completed, or failed). |
+| **Campaign** | A simpler alternative to batch jobs for quick outbound calling without scheduling or retry logic. |
+| **Cold Transfer** | Transferring a caller directly to a human agent without any briefing. |
+| **Custom Function** | A webhook-based tool that the agent can use during a conversation — for example, checking inventory or booking an appointment. |
+| **Disposition** | The outcome category of a call, such as "completed", "transferred", "hung-up", or "do-not-call". |
+| **Dynamic Variables** | Placeholders in agent prompts (e.g., `{{customer_name}}`) that are filled in with real data at the time of each call. |
 
 ## E–L
 
 | Term | Definition |
 |------|-----------|
-| **Egress** | LiveKit's recording service that captures audio from rooms and uploads to S3 as `.ogg` files. |
-| **E.164** | International phone number format with `+` prefix and country code (e.g., `+16505551234`). |
-| **Entrypoint** | The `entrypoint()` async function in `agent.py` — the main lifecycle handler for every voice call. |
-| **Factory Pattern** | Design pattern used by `LLMFactory`, `STTFactory`, `TTSFactory` to create provider-specific instances. |
-| **First Message** | The greeting the agent delivers via TTS when a call connects. |
-| **Inbound Trunk** | A LiveKit SIP trunk configured to receive incoming calls from PSTN/telephony providers. |
-| **JWT** | JSON Web Token — used for user authentication. Stored as `access_token` cookie; signed with HS256. |
-| **Knowledge Base** | A collection of documents uploaded to an agent for RAG-based retrieval during conversations. |
-| **LiveKit** | Open-source real-time communication platform providing WebRTC, SIP gateway, and Agents SDK. |
-| **LLM** | Large Language Model — the AI model powering the agent's conversation (e.g., GPT-4o, Groq Llama-3). |
+| **E.164** | The international phone number format with a `+` prefix and country code (e.g., `+16505551234`). |
+| **First Message** | The greeting your agent says when a call connects. |
+| **Knowledge Base** | Documents you upload to an agent so it can answer questions using your content during conversations. |
+| **LLM** | Large Language Model — the AI that powers the agent's conversation ability (e.g., GPT-4o). |
 
 ## M–R
 
 | Term | Definition |
 |------|-----------|
-| **Outbound Trunk** | A LiveKit SIP trunk used to initiate outgoing calls to PSTN numbers. |
-| **Platform Cost** | An additional per-call cost charged by Vaani on top of AI provider costs. |
-| **Pre-signed URL** | A time-limited S3 URL for accessing call recordings without AWS credentials (expires after 1 hour). |
-| **PSTN** | Public Switched Telephone Network — the traditional phone system. |
-| **RAG** | Retrieval-Augmented Generation — LLM technique where relevant documents are retrieved and injected into the prompt. |
-| **RBAC** | Role-Based Access Control — authorization system with admin/developer/member roles per workspace. |
+| **RAG** | Retrieval-Augmented Generation — a technique where the agent pulls information from your uploaded documents to give better answers. |
+| **RBAC** | Role-Based Access Control — the system that assigns Admin, Developer, or Member permissions within a workspace. |
 
 ## S–Z
 
 | Term | Definition |
 |------|-----------|
-| **SFU** | Selective Forwarding Unit — LiveKit's media routing architecture for WebRTC. |
-| **SIP** | Session Initiation Protocol — standard for voice call signaling over IP networks. |
-| **STT** | Speech-to-Text — converts spoken audio to text. Providers: Deepgram, Sarvam, Cartesia. |
-| **Superuser** | A platform-level admin flag granting access to all workspaces and the admin panel. |
-| **System Prompt** | The instructions that define the agent's personality, behavior, and rules. |
-| **TTS** | Text-to-Speech — converts text to spoken audio. 8 supported providers. |
-| **Turn Detection** | VAD-based algorithm that detects when a user has finished speaking, triggering the agent's response. |
-| **VAD** | Voice Activity Detection — detects human speech in audio streams to determine speech boundaries. |
-| **VUI Widget** | Voice User Interface widget — embeddable React component connecting to agents via WebRTC. |
-| **Warm Transfer** | Call transfer where the agent briefs the target party (delivering a summary) before connecting the caller. |
-| **Workspace** | A multi-tenant organizational unit. All data (agents, calls, SIP trunks) is scoped to a workspace. |
+| **SIP Trunk** | The connection between a phone number and the Vaani platform that enables voice call routing. |
+| **STT** | Speech-to-Text — converts the caller's spoken words into text for the agent to understand. |
+| **System Prompt** | The instructions that define your agent's personality, behavior, rules, and conversation goals. |
+| **TTS** | Text-to-Speech — converts the agent's text responses into natural-sounding spoken audio. |
+| **VUI Widget** | The embeddable voice interface component that lets website visitors talk to your agent in the browser. |
+| **Warm Transfer** | Transferring a caller to a human agent, with the AI first briefing the human about the conversation. |
+| **Workspace** | Your team's organizational unit in Vaani. All agents, calls, and settings belong to a workspace. |

@@ -1,7 +1,7 @@
 ---
 title: "FAQ"
 sidebarTitle: "FAQ"
-description: "Frequently asked questions for developers, integrators, and end users."
+description: "Frequently asked questions about using the Vaani platform."
 icon: "circle-question"
 ---
 
@@ -10,98 +10,70 @@ import { Info, Tip } from "mintlify/components";
 ## General
 
 ### What is Vaani?
-Vaani is a multi-tenant SaaS platform for building, deploying, and managing AI-powered voice agents that handle phone calls in real-time.
+Vaani is a platform for building, deploying, and managing AI-powered voice agents that handle phone calls in real-time — for support, sales, appointment scheduling, and more.
 
-### Who is it for?
-- **Businesses** wanting to automate phone support, appointment scheduling, and outbound campaigns
-- **Developers** building voice AI integrations
+### Who is Vaani for?
+- **Businesses** automating phone support, appointment scheduling, or outbound campaigns
 - **Contact centers** augmenting human agents with AI assistants
+- **Developers** building voice AI integrations via the API
 
 ### What languages are supported?
-Depends on the STT/TTS providers:
+Depends on the AI providers configured for your agent:
 - **Deepgram:** 36+ languages including English, Spanish, French, German, Japanese
 - **Sarvam:** Indian languages (Hindi, Tamil, Telugu, etc.)
-- **OpenAI:** Multiple languages via TTS
+- **OpenAI:** Multiple languages
 
-Language is configured per-agent via the `STT_language` setting.
+Language is configured per-agent in the agent settings.
 
 ---
 
 ## Features
 
-### How many concurrent calls can the system handle?
-Controlled by the `MAX_AGENT_SESSIONS` environment variable. The webhook handler tracks LiveKit room events to maintain a real-time count. Batch dispatch automatically throttles when at capacity.
+### How many calls can run at the same time?
+This is set by your platform administrator. The system tracks active calls and automatically queues new ones when at capacity.
 
 ### Can I use my own phone numbers?
 Yes. Use the **Register SIP Trunk** feature to connect existing phone numbers from any SIP-compatible provider.
 
 ### Does the agent remember previous conversations?
-Each call is a separate session. The agent does not have memory across calls by default. However, you can pass context via dynamic variables to provide per-call information.
+Each call is a separate session. The agent does not retain memory across calls. However, you can pass context via **dynamic variables** to personalize each call.
 
 ### Can agents query external APIs during calls?
-Yes, via **Custom Functions**. Configure webhook-based tools that the agent can invoke during conversations (e.g., check stock, look up orders, book appointments).
-
-### Is there billing/payment integration?
-Basic cost tracking exists per call (LLM + STT + TTS + platform costs). Users have a `credit` field, but active billing enforcement and payment gateway integration are not fully implemented yet.
-
----
-
-## Technical
-
-### How do I add a new AI provider?
-See the [Extending Providers](/developer-guide/extending-providers) guide. In short: install the LiveKit plugin, add a branch to the relevant factory class, and configure the API key.
-
-### How do I add a new API endpoint?
-1. Create/modify a router file in `app/router/`
-2. Add auth dependency: `Depends(require_workspace_access(WorkspaceRole.developer))`
-3. Create Pydantic schemas in `app/db/schemas/`
-4. Register the router in `app/main.py`
-
-### How do I add a database model?
-1. Create a model in `app/db/models/`
-2. Generate migration: `alembic revision --autogenerate -m "description"`
-3. Apply: `alembic upgrade head`
-
-### What's the difference between Batch Jobs and Campaigns?
-**Batch Jobs** use Celery (distributed, persistent, retry support, concurrency control). **Campaigns** use FastAPI BackgroundTasks (simpler, no retry, lost on restart). Use Batch Jobs for production workloads.
-
-### Where are call recordings stored?
-AWS S3, at path `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg`. The backend generates pre-signed URLs (1-hour expiry) for playback.
-
----
-
-## Debugging
-
-### The agent isn't picking up calls. What's wrong?
-1. Verify agent worker is running and connected to LiveKit
-2. Check `LIVEKIT_URL` and API key configuration
-3. Verify the phone number has SIP trunks configured
-4. Check `livekit:active_calls` Redis counter — might be at `MAX_AGENT_SESSIONS`
-5. Check agent worker logs for connection errors
-
-### How do I reset the active calls counter?
-```bash
-redis-cli SET livekit:active_calls 0
-```
-The counter has a 600-second TTL safety net but may need manual reset after crashes.
-
-### JWT authentication is failing. How do I debug?
-1. Check that `JWT_API_SECRET` is identical in backend and UI
-2. Verify `access_token` cookie is present in browser dev tools
-3. Check if token is expired (15-minute default lifetime)
-4. Ensure CORS settings allow credentials from the UI domain
-
----
-
-## Integration
-
-### Can I use the API without the dashboard?
-Yes. Use API key authentication for server-to-server access. See [API Keys](/security/api-keys).
-
-### Is there a Postman collection?
-Not yet. The Swagger/OpenAPI spec is available at `https://api.vaani.ai/docs`. You can import this into Postman.
+Yes, via **Custom Functions**. Configure webhook-based tools that the agent can invoke during conversations — for example, checking inventory, looking up orders, or booking appointments.
 
 ### Can I embed the voice agent on my website?
-Yes. The VUI Widget is an embeddable React component. Include it on any page to enable web-based voice interaction with your agents without phone infrastructure.
+Yes. The **VUI Widget** is an embeddable component that lets website visitors talk to your agent directly in the browser, without needing a phone.
 
-<Tip>Check out the [API Reference](/api-reference/overview) for complete endpoint documentation with curl examples.</Tip>
+### What's the difference between Batch Jobs and Campaigns?
+**Batch Jobs** are the recommended way to run outbound calling at scale — they support scheduling, concurrency control, per-call tracking, and automatic retry. **Campaigns** are a simpler option for quick, small-scale outbound calls.
+
+---
+
+## Account & Billing
+
+### Is there billing or payment integration?
+The platform tracks costs per call (covering LLM, speech-to-text, text-to-speech, and platform fees). Full billing integration with a payment gateway is not yet available.
+
+### How do I invite team members?
+Go to **Workspace Settings** → **Members** → **Invite**. Enter their email and choose a role (Member, Developer, or Admin).
+
+### Can I belong to multiple workspaces?
+Yes. You can be a member of multiple workspaces with different roles in each. Use the workspace switcher in the dashboard to change your active workspace.
+
+---
+
+## Troubleshooting
+
+### My agent isn't answering calls. What should I check?
+1. Verify the phone number is properly mapped to your agent in **Phone Numbers**
+2. Check that your agent is not paused or misconfigured
+3. Look at **Call Logs** for any error entries
+4. Contact your administrator if the issue persists
+
+### Call recordings aren't playing back
+Recordings may take a moment to process after a call ends. If the recording still doesn't appear after a few minutes, check your call log — the recording link expires after 1 hour, but a new one is generated each time you view the log.
+
+### I can't create agents or phone numbers
+Your role may not have sufficient permissions. **Member** accounts are read-only. Ask your workspace **Admin** to upgrade your role to **Developer** or **Admin**.
+
+<Tip>For API-related questions, see the [API Reference](/api-reference/overview). For developer and deployment questions, see the [Developer Guide](/developer-guide/overview).</Tip>
