@@ -6,7 +6,7 @@
     "dark": "/vaani_logo.svg",
     "light": "/vaani_logo.svg"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://mv.omind.ai/fav.png",
   "colors": {
     "primary": "#6366F1",
     "light": "#818CF8",
