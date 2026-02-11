@@ -55,27 +55,38 @@ The `AgentCaller` registers these as `@function_tool` methods at runtime via `ut
 
 ### What's the difference between Batch Jobs and Campaigns?
 
-| Aspect | Batch Jobs | Campaigns |
-|--------|-----------|-----------|
-| **Execution** | Celery (distributed) | BackgroundTasks (in-process) |
-| **Scheduling** | Yes (Celery Beat) | No |
-| **Concurrency** | Redis semaphore | No |
-| **Per-item Status** | Detailed | Basic |
-| **Retry** | Celery auto-retry | No |
+| Aspect | Batch Jobs | Campaigns (Vaani Dialer) |
+|--------|-----------|--------------------------|
+| **Execution** | Celery (distributed) | AMQP Dialer (Twisted + RabbitMQ) |
+| **Prospect Management** | Flat phone list | ProspectList → Prospect → ActiveProspect pipeline |
+| **Scheduling** | Celery Beat | Timezone-aware, per-prospect windows |
+| **DNC** | No | Built-in enforcement |
+| **Dispositions** | Basic status | Custom per-campaign with callback/DNC flags |
+| **Concurrency** | Redis semaphore | Call ratio + damper controls |
+| **Retry** | Celery auto-retry | Max calls per prospect + min time between calls |
 
-### What happens when a call comes in?
+### How does the AMQP dialer pipeline work?
 
-1. PSTN call → Twilio/Vonage → SIP to LiveKit
-2. LiveKit dispatch rule matches the phone number's inbound trunk
-3. New LiveKit room created
-4. Agent worker picks up via `entrypoint()`
-5. Worker loads agent config from PostgreSQL
-6. Conversation begins (STT → LLM → TTS loop)
-7. After call: recording to S3, call log to PostgreSQL
+The Ticker emits `CampaignTick` events via `TickerExchange` at each campaign's `dialer_interval`. Three consumers process these:
+- **Hopper** fills the prospect queue (filters by timezone, DNC, priority, expiry)
+- **Dialer** originates calls (respects call ratio and damper settings)
+- **Scheduler** manages scheduling requests (callbacks, time-delayed prospects)
 
-### Where are call recordings stored?
+All operate within a dedicated `VHOSTS.DIALER` RabbitMQ vhost with configurable `PREFETCH_COUNTS`.
 
-S3 at path `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg`. Backend generates pre-signed URLs (1hr expiry) for playback.
+### How are prospects assigned to live calls?
+
+The Hopper selects prospects from the highest-priority list first. Selected prospects become `ActiveProspect` entries (locked via semaphore). The Dialer then picks up ActiveProspects and originates outbound calls through the Vaani backend using the campaign's assigned `agent_id`.
+
+### How does the hopper fill algorithm work?
+
+On each `CampaignTick`, the Hopper:
+1. Checks if the campaign is active and within its dialing window
+2. Acquires a campaign-level semaphore to prevent concurrent fills
+3. Queries prospects filtered by: timezone window (per-prospect local time), DNC list exclusion, list priority, expiry date, and max call attempts
+4. Selects a batch of prospects (limited by `DIALER_BATCH_SIZE`)
+5. Creates `ActiveProspect` entries in the queue
+6. Releases the semaphore
 
 ---
 

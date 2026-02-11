@@ -12,10 +12,14 @@ icon: "book-bookmark"
 | **Agent** | An AI-powered virtual assistant that handles phone calls or web chats. You configure its behavior, voice, and personality. |
 | **Batch Job** | A set of phone numbers (uploaded via CSV) to be called automatically by an agent, with scheduling and progress tracking. |
 | **Batch Item** | A single phone number within a batch job, with its own status (pending, calling, completed, or failed). |
-| **Campaign** | A simpler alternative to batch jobs for quick outbound calling without scheduling or retry logic. |
+| **Call Ratio** | The ratio of outgoing calls to available agent sessions. A ratio of 1.5 means 1.5 calls are placed for every available agent. |
+| **Callback** | A scheduled follow-up call to a prospect, triggered when a disposition with the "callback" flag is applied. |
+| **Campaign** | An advanced outbound calling system with prospect management, timezone-aware scheduling, DNC compliance, dispositions, and dialing controls. |
 | **Cold Transfer** | Transferring a caller directly to a human agent without any briefing. |
 | **Custom Function** | A webhook-based tool that the agent can use during a conversation — for example, checking inventory or booking an appointment. |
-| **Disposition** | The outcome category of a call, such as "completed", "transferred", "hung-up", or "do-not-call". |
+| **Dialer Interval** | How often the dialer checks for new calls to place (measured in seconds, typically 2–15). |
+| **Disposition** | The outcome category of a call, such as "interested", "not home", "do-not-call", or "callback". Campaigns use custom dispositions per campaign. |
+| **DNC (Do Not Call)** | A compliance list of phone numbers that must not be called. Campaigns enforce DNC automatically. |
 | **Dynamic Variables** | Placeholders in agent prompts (e.g., `{{customer_name}}`) that are filled in with real data at the time of each call. |
 
 ## E–L
@@ -38,7 +42,10 @@ icon: "book-bookmark"
 
 | Term | Definition |
 |------|-----------|
+| **Prospect** | A contact to be called in a campaign. Each prospect has a phone number, call history, and disposition state. |
+| **Prospect List** | A collection of prospects uploaded via CSV. Campaigns can have multiple lists with different priorities. |
 | **SIP Trunk** | The connection between a phone number and the Vaani platform that enables voice call routing. |
+| **Scheduled Report** | An automated campaign report delivered via email at the end of dialing or at midnight. |
 | **STT** | Speech-to-Text — converts the caller's spoken words into text for the agent to understand. |
 | **System Prompt** | The instructions that define your agent's personality, behavior, rules, and conversation goals. |
 | **TTS** | Text-to-Speech — converts the agent's text responses into natural-sounding spoken audio. |

@@ -93,6 +93,18 @@ graph TB
     | **Key Pattern** | `mv/{YYYY}/{MM}/{DD}/{call_log_id}.ogg` |
     | **Critical Files** | `app/router/call.py:generate_presigned_url()` |
   </Tab>
+  <Tab title="RabbitMQ (Dialer)">
+    <Info>**Coming Soon** — Used by the Vaani Dialer (Campaign Scheduler), currently in development.</Info>
+
+    | Aspect | Detail |
+    |--------|--------|
+    | **Purpose** | AMQP message broker for the dialer pipeline — ticker events, hopper fills, scheduling requests |
+    | **Protocol** | AMQP 0-9-1 via `pika` / Twisted AMQP |
+    | **Config** | `VHOSTS.DIALER`, `PREFETCH_COUNTS.DIALER`, `PREFETCH_COUNTS.HOPPER`, `PREFETCH_COUNTS.SCHEDULER` |
+    | **Exchanges** | `TickerExchange` (campaign ticks), `CombinedTickerExchange`, `SchedulingExchange` |
+    | **Queues** | `DialingQueue`, `HopperQueue`, `SchedulingQueue` |
+    | **Critical Files** | `ppcc/amqp/dialer/` (dialer/, hopper/, scheduler/, ticker/) |
+  </Tab>
 </Tabs>
 
 ### Additional AI Providers

@@ -1,118 +1,51 @@
 ---
 title: "Campaigns API"
 sidebarTitle: "Campaigns"
-description: "Create, manage, and execute outbound calling campaigns."
+description: "Create, manage, and operate outbound calling campaigns via the Vaani Dialer API."
 icon: "bullhorn"
 ---
 
-import { CodeGroup, ParamField, Expandable } from "mintlify/components";
+import { CodeGroup, ParamField, Info, Warning } from "mintlify/components";
 
-## Create Campaign
+<Warning>**Coming Soon** — The Campaign Scheduler API is currently in development and available on the **Dev instance** for testing. It will be released to production in the coming weeks.</Warning>
 
-**`POST /campaigns`**
+## List Campaigns
 
-**Authentication:** JWT cookie (Developer+)
+**`GET /api/v/campaign/`**
 
-<CodeGroup>
-```bash Request
-curl -X POST "https://api.vaani.ai/campaigns" \
-  -H "Content-Type: application/json" \
-  -H "Cookie: access_token=YOUR_TOKEN" \
-  -d '{
-    "name": "Valentine Promo",
-    "description": "February promotion outreach",
-    "phone_number": "+16505551234"
-  }'
-```
+Returns all campaigns, optionally filtered by email or workspace.
 
-```json Response (201)
-{
-  "id": "camp_001",
-  "name": "Valentine Promo",
-  "description": "February promotion outreach",
-  "phone_number": "+16505551234",
-  "status": "created",
-  "total_numbers": 0,
-  "created_at": "2026-02-11T00:30:00Z"
-}
-```
-</CodeGroup>
+**Query Parameters:**
 
----
-
-## Import CSV into Campaign
-
-**`POST /campaigns/{campaign_id}/import`**
-
-Upload phone numbers from a CSV file. Duplicates are automatically removed.
-
-```bash
-curl -X POST "https://api.vaani.ai/campaigns/camp_001/import" \
-  -H "Cookie: access_token=YOUR_TOKEN" \
-  -F "file=@promo_contacts.csv"
-```
-
----
-
-## Add Numbers Manually
-
-**`POST /campaigns/{campaign_id}/numbers`**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `email` | string | Filter by campaign owner email |
+| `workspace` | string | Filter by workspace ID |
 
 <CodeGroup>
 ```bash Request
-curl -X POST "https://api.vaani.ai/campaigns/camp_001/numbers" \
-  -H "Content-Type: application/json" \
-  -H "Cookie: access_token=YOUR_TOKEN" \
-  -d '{
-    "phone_numbers": ["+14155551234", "+14155555678"]
-  }'
-```
-
-```json Response
-{
-  "added": 2,
-  "duplicates_removed": 0,
-  "total_numbers": 2
-}
-```
-</CodeGroup>
-
----
-
-## Start Campaign
-
-**`POST /campaigns/{campaign_id}/start`**
-
-Begin calling all numbers in the campaign.
-
-```bash
-curl -X POST "https://api.vaani.ai/campaigns/camp_001/start" \
+curl -X GET "https://api.vaani.ai/api/v/campaign/?workspace=ws_001" \
   -H "Cookie: access_token=YOUR_TOKEN"
 ```
 
----
-
-## List All Campaigns
-
-**`GET /campaigns`**
-
-Returns all campaigns in the workspace.
-
-<CodeGroup>
-```bash Request
-curl -X GET "https://api.vaani.ai/campaigns" \
-  -H "Cookie: access_token=YOUR_TOKEN"
-```
-
-```json Response
+```json Response (200)
 [
   {
-    "id": "camp_001",
-    "name": "Valentine Promo",
-    "status": "completed",
-    "total_numbers": 50,
-    "called": 48,
-    "created_at": "2026-02-11T00:30:00Z"
+    "name": "February Reminders",
+    "slug": "february-reminders",
+    "active": true,
+    "paused": false,
+    "archive": false,
+    "locale_name": "USCA",
+    "agent_id": "agent_abc123",
+    "workspace": "ws_001",
+    "email": "user@company.com",
+    "call_ratio": 1.0,
+    "max_active_calls": 0,
+    "dialer_interval": 10,
+    "max_number_calls": 10,
+    "earliest_prospect_time": "09:00:00",
+    "latest_prospect_time": "21:00:00"
   }
 ]
 ```
@@ -120,27 +53,208 @@ curl -X GET "https://api.vaani.ai/campaigns" \
 
 ---
 
+## Create Campaign
+
+**`POST /api/v/campaign/`**
+
+<CodeGroup>
+```bash Request
+curl -X POST "https://api.vaani.ai/api/v/campaign/" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "name": "February Reminders",
+    "agent_id": "agent_abc123",
+    "workspace": "ws_001",
+    "email": "user@company.com",
+    "locale_name": "USCA",
+    "earliest_prospect_time": "09:00:00",
+    "latest_prospect_time": "21:00:00",
+    "call_ratio": 1.0,
+    "max_number_calls": 10,
+    "min_time_between_calls": 30,
+    "dialer_interval": 10
+  }'
+```
+
+```json Response (201)
+{
+  "name": "February Reminders",
+  "slug": "february-reminders",
+  "active": true,
+  "agent_id": "agent_abc123",
+  "workspace": "ws_001"
+}
+```
+</CodeGroup>
+
+**Key Fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | *required* | Campaign display name |
+| `agent_id` | string | null | Vaani agent ID for this campaign |
+| `workspace` | string | null | Workspace this campaign belongs to |
+| `email` | string | null | Campaign owner email |
+| `locale_name` | string | `"USCA"` | Region for timezone and phone formatting |
+| `active` | boolean | `true` | Whether the campaign is active |
+| `call_ratio` | float | `1.0` | Ratio of outgoing calls to available agents |
+| `dialer_interval` | integer | `10` | Seconds between dialer ticks (2–15) |
+| `max_active_calls` | integer | `0` | Max concurrent calls (0 = unlimited) |
+| `max_number_calls` | integer | `10` | Max call attempts per prospect |
+| `min_time_between_calls` | integer | `30` | Min minutes between call attempts |
+| `dupe_days` | integer | `90` | Days a phone number is considered duplicate (-1 to disable) |
+| `expire_days` | integer | `90` | Days until a prospect expires |
+| `earliest_prospect_time` | time | `"09:00:00"` | Earliest time to call (prospect's timezone) |
+| `latest_prospect_time` | time | `"21:00:00"` | Latest time to call (prospect's timezone) |
+| `ignore_states` | string | `""` | Comma-separated states to exclude from dialing |
+| `filter_holidays` | boolean | `true` | Skip states that prohibit holiday telemarketing |
+| `max_wait_time` | integer | `60` | Max seconds a call waits in queue |
+| `queue_strategy` | string | `"longest-idle-agent"` | How calls are assigned to agents |
+| `wrap_up_time` | integer | `3` | Seconds between calls for agent wrap-up |
+| `paused` | boolean | `false` | Temporarily pause dialing |
+
+---
+
 ## Get Campaign Details
 
-**`GET /campaigns/{campaign_id}`**
+**`GET /api/v/campaign/{slug}/`**
 
-Returns campaign details with per-number status.
+Returns full campaign details by slug.
+
+```bash
+curl -X GET "https://api.vaani.ai/api/v/campaign/february-reminders/" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
 
 ---
 
 ## Update Campaign
 
-**`PUT /campaigns/{campaign_id}`**
+**`PUT /api/v/campaign/{slug}/`** or **`PATCH /api/v/campaign/{slug}/`**
 
-Update name, description, or phone number (only when status is `created`).
+Update campaign settings. The cache is automatically invalidated after updates.
+
+<CodeGroup>
+```bash Request
+curl -X PATCH "https://api.vaani.ai/api/v/campaign/february-reminders/" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "call_ratio": 1.5,
+    "max_active_calls": 20,
+    "paused": false
+  }'
+```
+
+```json Response (200)
+{
+  "name": "February Reminders",
+  "slug": "february-reminders",
+  "call_ratio": 1.5,
+  "max_active_calls": 20,
+  "paused": false
+}
+```
+</CodeGroup>
 
 ---
 
 ## Delete Campaign
 
-**`DELETE /campaigns/{campaign_id}`**
+**`DELETE /api/v/campaign/{slug}/`**
+
+Deletes the campaign and clears its cache.
 
 ```bash
-curl -X DELETE "https://api.vaani.ai/campaigns/camp_001" \
+curl -X DELETE "https://api.vaani.ai/api/v/campaign/february-reminders/" \
   -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+---
+
+## Campaign Status
+
+**`GET /api/v/campaign/{slug}/status/`**
+
+Returns the real-time operational status of a campaign.
+
+<CodeGroup>
+```bash Request
+curl -X GET "https://api.vaani.ai/api/v/campaign/february-reminders/status/" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+```json Response (200)
+{
+  "status": "Running"
+}
+```
+</CodeGroup>
+
+**Possible statuses:**
+
+| Status | Condition |
+|--------|-----------|
+| `Running` | Campaign is active and has prospects currently being called |
+| `Stopped` | Campaign is active with unresolved prospects but no active calls |
+| `Completed` | All prospects have been resolved |
+| `Inactive` | Campaign is not active |
+
+---
+
+## Upload Prospect List
+
+**`POST /api/v/upload/{list_slug}/`**
+
+Upload a CSV file to a prospect list. Large files are automatically split into batches.
+
+```bash
+curl -X POST "https://api.vaani.ai/api/v/upload/february-list/" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -F "original_data=@contacts.csv" \
+  -F "dedupe=true"
+```
+
+**Response:**
+```json
+{
+  "message": "Uploaded successfully."
+}
+```
+
+---
+
+## Retry Failed Upload
+
+**`POST /api/v/upload/{uuid}/retry/`**
+
+Retry a previously failed prospect list upload.
+
+```bash
+curl -X POST "https://api.vaani.ai/api/v/upload/550e8400-e29b-41d4-a716-446655440000/retry/" \
+  -H "Cookie: access_token=YOUR_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## Add Single Prospect
+
+**`POST /api/v/prospect/{list_uuid}/`**
+
+Add a single prospect to a prospect list via form data.
+
+```bash
+curl -X POST "https://api.vaani.ai/api/v/prospect/550e8400-e29b-41d4-a716-446655440000/" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d "primary_phone=+14155551234" \
+  -d "first_name=John" \
+  -d "last_name=Smith"
 ```

@@ -15,6 +15,7 @@ import { Steps, Step, Tabs, Tab, Info, Warning, CodeGroup } from "mintlify/compo
 | Node.js | 18+ | UI + widget |
 | PostgreSQL | 16 | Primary database |
 | Redis | 7+ | Cache + Celery broker |
+| RabbitMQ | 3.12+ | AMQP broker (Vaani Dialer) |
 | Docker | 24+ | Containerized deployment |
 | Docker Compose | 3.9+ | Multi-container orchestration |
 | Git | Latest | Version control |
@@ -80,6 +81,43 @@ import { Steps, Step, Tabs, Tab, Info, Warning, CodeGroup } from "mintlify/compo
     npm install
     npm run dev
     ```
+  </Tab>
+  <Tab title="Vaani Dialer">
+    <Info>**Coming Soon** — The Vaani Dialer is in development and available on the Dev instance for testing.</Info>
+    <Steps>
+      <Step title="Clone and setup">
+        ```bash
+        cd vaani_dialer
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        ```
+      </Step>
+      <Step title="Start infrastructure">
+        ```bash
+        # PostgreSQL (with uuid-ossp and hstore extensions) + RabbitMQ
+        docker-compose up db rabbitmq -d
+        ```
+      </Step>
+      <Step title="Configure">
+        ```bash
+        # Create .ppcc config file with database, RabbitMQ, and service settings
+        cp .ppcc.example .ppcc
+        # Edit settings as needed (see ppcc/web/settings_ppcc.py for defaults)
+        ```
+      </Step>
+      <Step title="Run Django migrations">
+        ```bash
+        python manage.py migrate
+        ```
+      </Step>
+      <Step title="Start the dialer">
+        ```bash
+        # Start the AMQP dialer (Twisted reactor)
+        python manage.py run_dialer
+        ```
+      </Step>
+    </Steps>
   </Tab>
 </Tabs>
 

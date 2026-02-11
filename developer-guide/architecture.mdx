@@ -22,11 +22,13 @@ graph TB
         Backend["FastAPI Backend<br/>Port 8000"]
         LiveKit["LiveKit Server<br/>SFU + SIP GW"]
         AgentWorker["Agent Worker<br/>agent.py entrypoint()"]
+        Dialer["Vaani Dialer<br/>Django + Twisted"]
     end
 
     subgraph Data["Data Layer"]
         PG["PostgreSQL"]
         Redis["Redis<br/>Cache + Queue"]
+        RabbitMQ["RabbitMQ<br/>AMQP Dialer"]
         S3["AWS S3<br/>Recordings"]
     end
 
@@ -52,6 +54,10 @@ graph TB
     Backend -->|Cache| Redis
     Backend -->|LiveKit API| LiveKit
 
+    Dialer -->|SQL| PG
+    Dialer -->|AMQP| RabbitMQ
+    Dialer -->|HTTP| Backend
+
     AgentWorker --> PG
     AgentWorker --> Redis
     AgentWorker --> S3
@@ -59,6 +65,63 @@ graph TB
     AgentWorker --> STT
     AgentWorker --> TTS
 ```
+
+---
+
+## Vaani Dialer Architecture
+
+<Info>**Coming Soon** — The Vaani Dialer is in development and available on the Dev instance for testing.</Info>
+
+The Vaani Dialer is an AMQP-based outbound call scheduler built on Django + Twisted. It runs as a separate service alongside the main FastAPI backend, managing prospect queues, call scheduling, and dialing flows via RabbitMQ.
+
+### Dialer Pipeline
+
+```mermaid
+graph LR
+    subgraph Ticker["⏱️ Ticker"]
+        T["Campaign Tick<br/>emitted per interval"]
+    end
+
+    subgraph Consumers["AMQP Consumers"]
+        H["🗂️ Hopper<br/>Fill prospect queue"]
+        D["📞 Dialer<br/>Originate calls"]
+        S["📅 Scheduler<br/>Handle scheduling"]
+    end
+
+    subgraph Data["Data Layer"]
+        PG["PostgreSQL<br/>Campaigns, Prospects"]
+        RMQ["RabbitMQ<br/>VHOSTS.DIALER"]
+    end
+
+    T -->|TickerExchange| H
+    T -->|TickerExchange| D
+    T -->|SchedulingExchange| S
+
+    H --> PG
+    D --> PG
+    S --> PG
+
+    T --> RMQ
+    RMQ --> H
+    RMQ --> D
+    RMQ --> S
+```
+
+**Component roles:**
+
+| Component | What It Does |
+|-----------|-------------|
+| **Ticker** | Emits `CampaignTick` events at the campaign's `dialer_interval` (2–15 seconds) |
+| **Hopper** | Fills the prospect queue — selects prospects based on list priority, timezone windows, DNC, and expiry rules |
+| **Dialer** | Consumes tick events and originates outbound calls via the Vaani backend, respecting call ratio and damper controls |
+| **Scheduler** | Handles scheduling requests — callback queuing, time-delayed prospects, and scheduling coordination |
+
+### Integration with Vaani Backend
+
+The dialer connects to the main Vaani platform through:
+- **Campaign fields** — `agent_id`, `workspace`, `email` link each campaign to a Vaani agent and workspace
+- **REST API** — The `v_views` layer exposes campaign CRUD, prospect upload, and status endpoints consumed by the Vaani dashboard
+- **Cache invalidation** — Campaign updates automatically clear Redis cache via `vaani_data_{slug}` keys
 
 ---
 

@@ -175,20 +175,27 @@ All endpoints (except public auth routes) require one of:
 
 ---
 
-## Campaigns Module — `/campaigns`
+## Campaigns Module (Vaani Dialer) — `/api/v/`
+
+<Info>**Coming Soon** — The Campaign Scheduler API is in development and available on the Dev instance for testing.</Info>
+
+The Vaani Dialer exposes a Django REST API at `/api/v/` with campaign CRUD, prospect list uploads, and status endpoints.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/campaigns` | D, A | Create campaign |
-| `GET` | `/campaigns` | M, D, A | List campaigns |
-| `GET` | `/campaigns/{id}` | JWT | Get campaign details |
-| `PUT` | `/campaigns/{id}` | D, A | Update campaign |
-| `DELETE` | `/campaigns/{id}` | D, A | Delete campaign |
-| `POST` | `/campaigns/{id}/import_csv` | JWT | Import numbers from CSV |
-| `POST` | `/campaigns/{id}/add_numbers` | JWT | Add numbers manually |
-| `DELETE` | `/campaigns/{id}/phone_numbers` | JWT | Delete number |
-| `POST` | `/campaigns/{id}/start` | JWT | Start campaign |
-| `GET` | `/campaigns/{id}/status` | JWT | Campaign status |
+| `GET` | `/api/v/campaign/` | JWT | List campaigns (filter by `email`, `workspace`) |
+| `POST` | `/api/v/campaign/` | JWT | Create campaign |
+| `GET` | `/api/v/campaign/{slug}/` | JWT | Get campaign details |
+| `PUT/PATCH` | `/api/v/campaign/{slug}/` | JWT | Update campaign (clears cache) |
+| `DELETE` | `/api/v/campaign/{slug}/` | JWT | Delete campaign (clears cache) |
+| `GET` | `/api/v/campaign/{slug}/status/` | None | Real-time campaign status |
+| `POST` | `/api/v/upload/{slug}/` | JWT | Upload prospect list CSV |
+| `POST` | `/api/v/upload/{uuid}/retry/` | JWT | Retry failed upload |
+| `POST` | `/api/v/prospect/{uuid}/` | JWT | Add single prospect |
+| `GET` | `/api/v/options/` | JWT | Campaign configuration options |
+| `GET` | `/api/v/live/` | JWT | Live call activity |
+| `DELETE` | `/api/v/delete-cache/` | JWT | Clear campaign cache |
+| `POST` | `/api/v/webhook/` | None | Dialer webhook events |
 
 ---
 

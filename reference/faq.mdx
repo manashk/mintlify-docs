@@ -45,7 +45,19 @@ Yes, via **Custom Functions**. Configure webhook-based tools that the agent can 
 Yes. The **VUI Widget** is an embeddable component that lets website visitors talk to your agent directly in the browser, without needing a phone.
 
 ### What's the difference between Batch Jobs and Campaigns?
-**Batch Jobs** are the recommended way to run outbound calling at scale — they support scheduling, concurrency control, per-call tracking, and automatic retry. **Campaigns** are a simpler option for quick, small-scale outbound calls.
+**Campaigns** are the full-featured outbound dialer — they offer prospect list management, timezone-aware scheduling, DNC compliance, call ratio controls, dispositions, and automated reporting. **Batch Jobs** are simpler and better suited for quick, one-off call lists. For new outbound projects, we recommend Campaigns.
+
+### How does timezone-aware dialing work in Campaigns?
+When you set earliest/latest call times on a campaign, the system automatically determines each prospect's local timezone based on their phone number's area code and state. It will only place calls during the allowed window in the *prospect's* timezone, not yours.
+
+### What are prospect list priorities?
+Each campaign can have multiple prospect lists. Higher-priority lists are dialed first. When the dialer fills its queue (hopper), it selects prospects from the highest-priority list before moving to lower-priority ones.
+
+### How do DNC lists work?
+You can assign one or more Do-Not-Call lists to a campaign. Before each call, the system checks if the prospect's phone number appears on any assigned DNC list and skips it if so. You can also set a disposition that automatically adds prospects to the DNC list when applied.
+
+### How are callbacks scheduled in Campaigns?
+When an agent applies a disposition with the "callback" flag, the prospect is re-queued at the scheduled callback time. The dialer's hopper picks it up again during the next fill cycle after the callback time has been reached.
 
 ---
 

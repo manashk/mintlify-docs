@@ -142,27 +142,66 @@ stateDiagram-v2
 
 ---
 
-## Feature 5: Campaigns
+## Feature 5: Campaigns (Advanced Call Scheduler)
+
+<Info>**Coming Soon** — The Campaign Scheduler is in development and available on the Dev instance for testing.</Info>
 
 ### Business Description
-Campaigns are collections of phone numbers to call using a specific agent — simpler than batch jobs.
+Campaigns provide a full-featured outbound dialer engine (ported from PerfectPitch). Unlike batch jobs, campaigns offer prospect list management, timezone-aware scheduling, DNC compliance, call ratio controls, disposition workflows, and automated reporting.
 
-### API Endpoints
+### Campaign → Prospect Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Campaign: Create campaign
+    Campaign --> ProspectList: Upload CSV
+    ProspectList --> Prospect: Parse rows + dedup
+    Prospect --> Hopper: Queue fills
+    Hopper --> ActiveProspect: Call initiated
+    ActiveProspect --> Resolved: Disposition applied
+    ActiveProspect --> Callback: Callback scheduled
+    Callback --> Hopper: Callback time reached
+    Resolved --> [*]
+```
+
+### Dialer Subsystems
+
+| Subsystem | Role | Exchange |
+|-----------|------|----------|
+| **Ticker** | Emits `CampaignTick` at `dialer_interval` seconds | `TickerExchange` |
+| **Hopper** | Fills prospect queue (timezone/DNC/priority filtering) | `TickerExchange` |
+| **Dialer** | Originates calls respecting call ratio and dampers | `TickerExchange` / `CombinedTickerExchange` |
+| **Scheduler** | Handles scheduling requests and callback coordination | `SchedulingExchange` |
+
+### API Endpoints (Vaani Layer)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/campaigns` | Create campaign |
-| `GET` | `/campaigns` | List campaigns |
-| `POST` | `/campaigns/{id}/import_csv` | Import numbers from CSV |
-| `POST` | `/campaigns/{id}/add_numbers` | Add numbers manually |
-| `POST` | `/campaigns/{id}/start` | Start campaign execution |
-| `GET` | `/campaigns/{id}/status` | Campaign overall status |
+| `GET` | `/api/v/campaign/` | List campaigns (filter by email/workspace) |
+| `POST` | `/api/v/campaign/` | Create campaign |
+| `GET` | `/api/v/campaign/{slug}/` | Get campaign details |
+| `PUT/PATCH` | `/api/v/campaign/{slug}/` | Update campaign |
+| `DELETE` | `/api/v/campaign/{slug}/` | Delete campaign |
+| `GET` | `/api/v/campaign/{slug}/status/` | Real-time campaign status |
+| `POST` | `/api/v/upload/{slug}/` | Upload prospect list CSV |
+| `POST` | `/api/v/upload/{uuid}/retry/` | Retry failed upload |
+| `POST` | `/api/v/prospect/{uuid}/` | Add single prospect |
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `ppcc/web/apps/ppcc/models/realm.py` | `Campaign` model (~70 fields) |
+| `ppcc/web/apps/ppcc/models/prospect.py` | `Prospect`, `ProspectList`, `ActiveProspect` |
+| `ppcc/web/apps/api/v_views/campaign.py` | Campaign CRUD ViewSet |
+| `ppcc/web/apps/api/v_views/upload.py` | Prospect list CSV upload |
+| `ppcc/amqp/dialer/` | AMQP dialer pipeline (hopper, dialer, scheduler, ticker) |
+| `ppcc/stats/models.py` | Campaign reports and statistics |
 
 <Warning>
 **Limitations:**
-- Uses `BackgroundTasks` (not Celery) — no retry mechanism
-- No campaign pausing or resuming
-- Phone number deduplication on import but not on manual add
+- Manager module is not yet ported (currently commented out)
+- Some legacy PerfectPitch fields remain as placeholders (commented out in models)
 </Warning>
 
 ---

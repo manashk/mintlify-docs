@@ -15,16 +15,18 @@ erDiagram
     Workspace ||--o{ UserWorkspace : "has members"
     User ||--o{ Agents : "creates"
     User ||--o{ SIP : "provisions"
-    User ||--o{ Campaign : "creates"
     User ||--o{ CallLog : "owns"
     Workspace ||--o{ Agents : "contains"
-    Workspace ||--o{ Campaign : "contains"
     Workspace ||--o{ CallLog : "contains"
     Agents ||--o{ CallLog : "handles"
     Agents ||--o{ SIP : "assigned"
     Agents ||--o{ DynamicData : "stores"
     BatchJob ||--o{ BatchItem : "contains"
     BatchJob ||--o{ CallLog : "generates"
+    Campaign ||--o{ ProspectList : "contains"
+    Campaign ||--o{ Disposition : "defines"
+    Campaign }o--o{ DoNotCallList : "enforces"
+    ProspectList ||--o{ Prospect : "contains"
 
     User {
         string id PK
@@ -84,6 +86,44 @@ erDiagram
         string phone_number
         json payload_json
         enum status
+    }
+
+    Campaign {
+        int id PK
+        string name
+        string slug UK
+        string agent_id FK
+        string workspace
+        boolean active
+        boolean paused
+        float call_ratio
+    }
+
+    ProspectList {
+        int id PK
+        int campaign_id FK
+        string name
+        int priority
+    }
+
+    Prospect {
+        uuid uuid PK
+        int prospect_list_id FK
+        string primary_phone
+        datetime datetime_resolved
+    }
+
+    Disposition {
+        int id PK
+        int campaign_id FK
+        string title
+        boolean qualified
+        boolean do_not_call
+    }
+
+    DoNotCallList {
+        int id PK
+        string name
     }
 ```
 
@@ -227,6 +267,66 @@ erDiagram
     | `status` | Enum | pending/calling/completed/failed |
     | `error` | String | Error message (if failed) |
   </Tab>
+  <Tab title="Campaign (Dialer)">
+    <Info>**Coming Soon** — The Campaign Scheduler is in development and available on the Dev instance for testing.</Info>
+
+    **Campaign** (`ppcc_campaign`) — File: `ppcc/web/apps/ppcc/models/realm.py`
+
+    | Column | Type | Description |
+    |--------|------|-------------|
+    | `name` | String(50) | Campaign display name |
+    | `slug` | SlugField | Unique URL-friendly identifier |
+    | `active` | Boolean | Whether campaign is running |
+    | `paused` | Boolean | Temporarily pause dialing |
+    | `agent_id` | String | Vaani agent ID |
+    | `workspace` | String | Vaani workspace ID |
+    | `email` | String | Campaign owner email |
+    | `locale_name` | String(4) | Region (e.g., USCA) |
+    | `call_ratio` | Float | Calls per available agent |
+    | `dialer_interval` | Integer | Seconds between dialer ticks |
+    | `max_active_calls` | Integer | Max concurrent calls |
+    | `max_number_calls` | Integer | Max attempts per prospect |
+    | `min_time_between_calls` | Integer | Min minutes between retries |
+    | `earliest_prospect_time` | Time | Earliest call time (prospect TZ) |
+    | `latest_prospect_time` | Time | Latest call time (prospect TZ) |
+    | `ignore_states` | String | States to exclude |
+    | `filter_holidays` | Boolean | Skip holiday-restricted states |
+    | `dupe_days` | Integer | Dedup window in days |
+    | `expire_days` | Integer | Prospect expiry in days |
+    | `wrap_up_time` | Integer | Agent wrap-up seconds |
+
+    **ProspectList** (`ppcc_prospectlist`) — File: `ppcc/web/apps/ppcc/models/prospect.py`
+
+    | Column | Type | Description |
+    |--------|------|-------------|
+    | `campaign` | FK → Campaign | Parent campaign |
+    | `name` | String | List name |
+    | `priority` | Integer | List dialing priority |
+    | `slug` | String | URL-friendly identifier |
+
+    **Prospect** (`ppcc_prospect`) — File: `ppcc/web/apps/ppcc/models/prospect.py`
+
+    | Column | Type | Description |
+    |--------|------|-------------|
+    | `uuid` | UUID | Prospect identifier |
+    | `prospect_list` | FK → ProspectList | Parent list |
+    | `primary_phone` | String | Phone number |
+    | `first_name`, `last_name` | String | Contact name |
+    | `disposition` | FK → Disposition | Call outcome |
+    | `datetime_resolved` | DateTime | When prospect was resolved |
+    | `num_calls` | Integer | Total call attempts |
+
+    **Disposition** (`ppcc_disposition`) — File: `ppcc/web/apps/ppcc/models/disposition.py`
+
+    | Column | Type | Description |
+    |--------|------|-------------|
+    | `campaign` | FK → Campaign | Parent campaign |
+    | `title` | String | Display name |
+    | `qualified` | Boolean | Counts as success |
+    | `contacted` | Boolean | Prospect was reached |
+    | `call_back` | Boolean | Schedule callback |
+    | `do_not_call` | Boolean | Add to DNC |
+  </Tab>
 </Tabs>
 
 ---
@@ -256,3 +356,6 @@ alembic downgrade -1
 | **Call Log** | Agent worker post-call | Only `notes` field | Not exposed via API |
 | **Batch Item** | CSV upload → bulk insert | Dispatcher updates status | Cascade with BatchJob |
 | **SIP** | Purchase or trunk register | Delete + recreate LiveKit | `DELETE /phonenumbers/delete_sip` |
+| **Campaign** | `POST /api/v/campaign/` | `PATCH /api/v/campaign/{slug}/` | `DELETE /api/v/campaign/{slug}/` |
+| **Prospect** | CSV upload → ProspectListUpload | Disposition applied on call | Resolved or expired |
+| **ProspectList** | Created with campaign | Priority/name update | Cascade with campaign |
