@@ -57,6 +57,7 @@
       },
       {
         "tab": "API Reference",
+        "hidden": true,
         "groups": [
           {
             "group": "API Reference",
@@ -78,6 +79,7 @@
       },
       {
         "tab": "Developer Guide",
+        "hidden": true,
         "groups": [
           {
             "group": "Overview",
